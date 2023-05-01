@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using Dav.AspNetCore.Server.Stores;
 
 namespace Dav.AspNetCore.Server.Handlers;
 
@@ -31,53 +30,36 @@ internal class DeleteHandler : RequestHandler
             return;
         }
 
-        var result = await DeleteItemRecursiveAsync(Collection, Item, cancellationToken);
-        if (result == null)
+        var errors = new List<WebDavError>();
+        var result = await DeleteItemRecursiveAsync(Collection, Item, errors, cancellationToken);
+        if (result)
         {
             Context.SetResult(DavStatusCode.NoContent);
             return;
         }
 
-        var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{result.Uri.AbsolutePath}");
-        var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)result.StatusCode} {result.StatusCode.GetDisplayName()}");
-        var error = new XElement(XmlNames.Error, result.ErrorElement);
-        var response = new XElement(XmlNames.Response, href, status, error);
-        var multiStatus = new XElement(XmlNames.MultiStatus, response);
+        var responses = new List<XElement>();
+        foreach (var davError in errors)
+        {
+            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Uri.AbsolutePath}");
+            var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)davError.StatusCode} {davError.StatusCode.GetDisplayName()}");
+            var response = new XElement(XmlNames.Response, href, status);
+            
+            if (davError.ErrorElement != null)
+            {
+                var error = new XElement(XmlNames.Error, davError.ErrorElement);
+                response.Add(error);
+            }
+
+            responses.Add(response);
+        }
+
+
+        var multiStatus = new XElement(XmlNames.MultiStatus, responses);
         var document = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             multiStatus);
 
         await Context.WriteDocumentAsync(DavStatusCode.MultiStatus, document, cancellationToken);
-    }
-
-    private async Task<UriError?> DeleteItemRecursiveAsync(
-        IStoreCollection collection, 
-        IStoreItem item, 
-        CancellationToken cancellationToken = default)
-    {
-        if (item is IStoreCollection collectionToDelete)
-        {
-            var items = await collectionToDelete.GetItemsAsync(cancellationToken);
-            foreach (var subItem in items)
-            {
-                var result = await DeleteItemRecursiveAsync(collectionToDelete, subItem, cancellationToken);
-                if (result != null)
-                    return result;
-            }
-        }
-
-        var isLocked = await CheckLockedAsync(item.Uri, cancellationToken);
-        if (isLocked)
-        {
-            var tokenSubmitted = await ValidateTokenAsync(item.Uri, cancellationToken);
-            if (!tokenSubmitted)
-                return new UriError(item.Uri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted));
-        }
-        
-        var itemName = item.Uri.GetRelativeUri(collection.Uri).LocalPath.TrimStart('/');
-        var status = await collection.DeleteItemAsync(itemName, cancellationToken);
-        return status != DavStatusCode.NoContent 
-            ? new UriError(item.Uri, status, null) 
-            : null;
     }
 }

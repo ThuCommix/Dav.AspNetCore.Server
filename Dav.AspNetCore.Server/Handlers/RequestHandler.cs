@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Dav.AspNetCore.Server.Http;
 using Dav.AspNetCore.Server.Http.Headers;
 using Dav.AspNetCore.Server.Locks;
@@ -166,6 +167,49 @@ internal abstract class RequestHandler : IRequestHandler
                         .Any(z => z.Value == x.Id.AbsoluteUri)));
 
             return unlock;
+        }
+
+        return true;
+    }
+    
+    protected async Task<bool> DeleteItemRecursiveAsync(
+        IStoreCollection collection, 
+        IStoreItem item,
+        ICollection<WebDavError> errors,
+        CancellationToken cancellationToken = default)
+    {
+        var error = false;
+        if (item is IStoreCollection collectionToDelete)
+        {
+            var items = await collectionToDelete.GetItemsAsync(cancellationToken);
+            foreach (var subItem in items)
+            {
+                var result = await DeleteItemRecursiveAsync(collectionToDelete, subItem, errors, cancellationToken);
+                if (!result)
+                    error = true;
+            }
+        }
+
+        var isLocked = await CheckLockedAsync(item.Uri, cancellationToken);
+        if (isLocked)
+        {
+            var tokenSubmitted = await ValidateTokenAsync(item.Uri, cancellationToken);
+            if (!tokenSubmitted)
+            {
+                error = true;
+                errors.Add(new WebDavError(item.Uri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
+            }
+        }
+
+        if (error)
+            return false;
+        
+        var itemName = item.Uri.GetRelativeUri(collection.Uri).LocalPath.TrimStart('/');
+        var status = await collection.DeleteItemAsync(itemName, cancellationToken);
+        if (status != DavStatusCode.NoContent)
+        {
+            errors.Add(new WebDavError(item.Uri, status, null));
+            return false;
         }
 
         return true;

@@ -49,22 +49,24 @@ internal class CopyHandler : RequestHandler
             return;
         }
         
-        var destinationItemName = WebDavHeaders.Destination.GetRelativeUri(destinationParentUri).LocalPath.Trim('/');
-        var destinationItem = await Store.GetItemAsync(WebDavHeaders.Destination, cancellationToken);
+        var destinationItemName = destination.GetRelativeUri(destinationParentUri).LocalPath.Trim('/');
+        var destinationItem = await Store.GetItemAsync(destination, cancellationToken);
         if (destinationItem != null && !overwrite)
         {
             Context.SetResult(DavStatusCode.PreconditionFailed);
             return;
         }
 
+        var errors = new List<WebDavError>();
         var result = await CopyItemRecursiveAsync(
             Item,
             destinationCollection,
             destinationItemName,
             depth == Depth.Infinity,
+            errors,
             cancellationToken);
 
-        if (result == null)
+        if (result)
         {
             Context.SetResult(destinationItem != null
                 ? DavStatusCode.NoContent
@@ -72,11 +74,24 @@ internal class CopyHandler : RequestHandler
             return;
         }
         
-        var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{result.Uri.AbsolutePath}");
-        var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)result.StatusCode} {result.StatusCode.GetDisplayName()}");
-        var error = new XElement(XmlNames.Error, result.ErrorElement);
-        var response = new XElement(XmlNames.Response, href, status, error);
-        var multiStatus = new XElement(XmlNames.MultiStatus, response);
+        var responses = new List<XElement>();
+        foreach (var davError in errors)
+        {
+            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Uri.AbsolutePath}");
+            var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)davError.StatusCode} {davError.StatusCode.GetDisplayName()}");
+            var response = new XElement(XmlNames.Response, href, status);
+            
+            if (davError.ErrorElement != null)
+            {
+                var error = new XElement(XmlNames.Error, davError.ErrorElement);
+                response.Add(error);
+            }
+
+            responses.Add(response);
+        }
+
+
+        var multiStatus = new XElement(XmlNames.MultiStatus, responses);
         var document = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             multiStatus);
@@ -84,36 +99,44 @@ internal class CopyHandler : RequestHandler
         await Context.WriteDocumentAsync(DavStatusCode.MultiStatus, document, cancellationToken);
     }
 
-    private async Task<UriError?> CopyItemRecursiveAsync(
+    private async Task<bool> CopyItemRecursiveAsync(
         IStoreItem item,
         IStoreCollection destination,
         string name,
         bool recursive,
+        ICollection<WebDavError> errors,
         CancellationToken cancellationToken = default)
     {
         var destinationUri = UriHelper.Combine(destination.Uri, name);
+        var isLocked = await CheckLockedAsync(destinationUri, cancellationToken);
+        if (isLocked)
+        {
+            var tokenSubmitted = await ValidateTokenAsync(destinationUri, cancellationToken);
+            if (!tokenSubmitted)
+            {
+                errors.Add(new WebDavError(destinationUri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
+                return false;
+            }
+        }
+
         var destinationItem = await destination.GetItemAsync(name, cancellationToken);
         if (destinationItem != null)
         {
-            var isLocked = await CheckLockedAsync(destinationUri, cancellationToken);
-            if (isLocked)
-            {
-                var tokenSubmitted = await ValidateTokenAsync(item.Uri, cancellationToken);
-                if (!tokenSubmitted)
-                    return new UriError(item.Uri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted));
-            }
-            
-            var deleteResult = await destination.DeleteItemAsync(name, cancellationToken);
-            if (deleteResult != DavStatusCode.NoContent)
-                return new UriError(destinationUri, deleteResult, null);
+            var deleteResult = await DeleteItemRecursiveAsync(destination, destinationItem, errors, cancellationToken);
+            if (!deleteResult)
+                return false;
         }
         
         var result = await item.CopyAsync(destination, name, true, cancellationToken);
         if (result.Item == null)
-            return new UriError(destinationUri, result.StatusCode, null);
+        {
+            errors.Add(new WebDavError(destinationUri, result.StatusCode, null));
+            return false;
+        }
 
         if (recursive && item is IStoreCollection collection)
         {
+            var subItemError = false;
             var items = await collection.GetItemsAsync(cancellationToken);
             foreach (var subItem in items)
             {
@@ -122,12 +145,15 @@ internal class CopyHandler : RequestHandler
                     throw new InvalidOperationException("If the copied item is a collection, the copy result must also be a collection.");
                 
                 var itemName = subItem.Uri.GetRelativeUri(collection.Uri).LocalPath.TrimStart('/');
-                var error = await CopyItemRecursiveAsync(subItem, destinationCopy, itemName, recursive, cancellationToken);
-                if (error != null)
-                    return error;
+                var error = await CopyItemRecursiveAsync(subItem, destinationCopy, itemName, recursive, errors, cancellationToken);
+                if (!error)
+                    subItemError = true;
             }
+
+            if (subItemError)
+                return false;
         }
 
-        return null;
+        return true;
     }
 }
