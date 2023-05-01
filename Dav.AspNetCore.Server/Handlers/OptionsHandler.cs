@@ -1,5 +1,5 @@
 using Dav.AspNetCore.Server.Http;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 

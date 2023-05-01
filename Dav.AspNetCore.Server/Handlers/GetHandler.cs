@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Http;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
 using Microsoft.AspNetCore.Http;
 
 namespace Dav.AspNetCore.Server.Handlers;
@@ -89,7 +89,7 @@ internal class GetHandler : RequestHandler
         if (metadata == null || metadata.IsExpensive)
             return null;
 
-        var result = await item.PropertyManager.GetPropertyAsync(Context, item, propertyName, cancellationToken);
+        var result = await item.PropertyManager.GetPropertyAsync(Context, propertyName, cancellationToken);
         return (string?)result.Value;
     }
     

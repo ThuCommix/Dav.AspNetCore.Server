@@ -2,7 +2,7 @@ using System.Xml.Linq;
 using Dav.AspNetCore.Server.Http;
 using Dav.AspNetCore.Server.Http.Headers;
 using Dav.AspNetCore.Server.Locks;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -252,7 +252,7 @@ internal abstract class RequestHandler : IRequestHandler
                     string? itemEtag = null;
                     if (item != null)
                     {
-                        var etagResult = await item.PropertyManager.GetPropertyAsync(Context, item, XmlNames.GetEtag, cancellationToken);
+                        var etagResult = await item.PropertyManager.GetPropertyAsync(Context, XmlNames.GetEtag, cancellationToken);
                         if (etagResult.IsSuccess)
                             itemEtag = (string?)etagResult.Value;
                     }
@@ -324,7 +324,7 @@ internal abstract class RequestHandler : IRequestHandler
                 string? itemEtag = null;
                 if (Item != null)
                 {
-                    var etagResult = await Item.PropertyManager.GetPropertyAsync(Context, Item, XmlNames.GetEtag, cancellationToken);
+                    var etagResult = await Item.PropertyManager.GetPropertyAsync(Context, XmlNames.GetEtag, cancellationToken);
                     if (etagResult.IsSuccess)
                         itemEtag = (string?)etagResult.Value;
                 }
@@ -356,7 +356,7 @@ internal abstract class RequestHandler : IRequestHandler
                 string? itemEtag = null;
                 if (Item != null)
                 {
-                    var etagResult = await Item.PropertyManager.GetPropertyAsync(Context, Item, XmlNames.GetEtag, cancellationToken);
+                    var etagResult = await Item.PropertyManager.GetPropertyAsync(Context, XmlNames.GetEtag, cancellationToken);
                     if (etagResult.IsSuccess)
                         itemEtag = (string?)etagResult.Value;
                 }
@@ -372,7 +372,7 @@ internal abstract class RequestHandler : IRequestHandler
         {
             if (Item != null)
             {
-                var modifiedResult = await Item.PropertyManager.GetPropertyAsync(Context, Item, XmlNames.GetLastModified, cancellationToken);
+                var modifiedResult = await Item.PropertyManager.GetPropertyAsync(Context, XmlNames.GetLastModified, cancellationToken);
                 if (modifiedResult.IsSuccess && DateTimeOffset.Parse(modifiedResult.Value!.ToString()!) > requestHeaders.IfUnmodifiedSince)
                 {
                     Context.SetResult(DavStatusCode.PreconditionFailed);
@@ -387,7 +387,7 @@ internal abstract class RequestHandler : IRequestHandler
         {
             if (Item != null)
             {
-                var modifiedResult = await Item.PropertyManager.GetPropertyAsync(Context, Item, XmlNames.GetLastModified, cancellationToken);
+                var modifiedResult = await Item.PropertyManager.GetPropertyAsync(Context, XmlNames.GetLastModified, cancellationToken);
                 if (modifiedResult.IsSuccess && DateTimeOffset.Parse(modifiedResult.Value!.ToString()!) <= requestHeaders.IfModifiedSince)
                 {
                     Context.SetResult(DavStatusCode.NotModified);

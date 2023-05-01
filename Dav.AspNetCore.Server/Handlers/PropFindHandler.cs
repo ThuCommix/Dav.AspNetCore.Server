@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Http.Headers;
-using Dav.AspNetCore.Server.Properties;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
+using Dav.AspNetCore.Server.Store.Properties;
 using Microsoft.AspNetCore.Http;
 
 namespace Dav.AspNetCore.Server.Handlers;
@@ -134,7 +134,7 @@ internal class PropFindHandler : RequestHandler
         {
             try
             {
-                var propertyValue = await item.PropertyManager.GetPropertyAsync(Context, item, propertyName, cancellationToken);
+                var propertyValue = await item.PropertyManager.GetPropertyAsync(Context, propertyName, cancellationToken);
                 propertyValues.Add(propertyName, propertyValue);
             }
             catch

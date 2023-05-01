@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Xml.Linq;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
 
 namespace Dav.AspNetCore.Server.Locks;
 

@@ -1,4 +1,4 @@
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
 using Microsoft.AspNetCore.Http;
 
 namespace Dav.AspNetCore.Server;

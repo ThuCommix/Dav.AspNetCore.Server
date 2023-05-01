@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Locks;
-using Dav.AspNetCore.Server.Properties;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
+using Dav.AspNetCore.Server.Store.Properties;
 using Xunit;
 
 namespace Dav.AspNetCore.Server.Tests.Locks;
@@ -314,7 +314,7 @@ public class InMemoryLockManagerTest
     private record TestStoreItem(Uri Uri, ILockManager LockManager) : IStoreItem
     {
         public IPropertyManager PropertyManager 
-            => new DefaultPropertyManager<TestStoreItem>(Array.Empty<Property<TestStoreItem>>());
+            => new PropertyManager(this, Array.Empty<AttachedProperty<TestStoreItem>>());
         
         public Task<Stream> GetReadableStreamAsync(CancellationToken cancellationToken = default)
         {

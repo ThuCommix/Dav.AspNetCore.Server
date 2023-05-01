@@ -4,8 +4,8 @@ using Dav.AspNetCore.Server.Handlers;
 using Dav.AspNetCore.Server.Http;
 using Dav.AspNetCore.Server.Http.Headers;
 using Dav.AspNetCore.Server.Locks;
-using Dav.AspNetCore.Server.Properties;
-using Dav.AspNetCore.Server.Stores;
+using Dav.AspNetCore.Server.Store;
+using Dav.AspNetCore.Server.Store.Properties;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -292,7 +292,7 @@ public class RequestHandlerTest
         }
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, collection.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemEtag));
 
         collection.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
@@ -344,7 +344,7 @@ public class RequestHandlerTest
         httpContext.SetupSet(s => s.Response.StatusCode = StatusCodes.Status412PreconditionFailed);
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, collection.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemEtag));
 
         collection.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
@@ -573,7 +573,7 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, item.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemEtag));
 
         item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
@@ -657,7 +657,7 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, item.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemEtag));
 
         item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
@@ -768,7 +768,7 @@ public class RequestHandlerTest
         var item = new Mock<IStoreItem>();
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, item.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemModified.ToString("R")));
 
         item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
@@ -832,7 +832,7 @@ public class RequestHandlerTest
         var item = new Mock<IStoreItem>();
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, item.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
+        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
             .ReturnsAsync(PropertyResult.Success(itemModified.ToString("R")));
 
         item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);

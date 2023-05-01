@@ -54,7 +54,6 @@ internal class PropPatchHandler : RequestHandler
                 
                 var result = await Item.PropertyManager.SetPropertyAsync(
                     Context,
-                    Item,
                     element.Name,
                     propertyValue,
                     cancellationToken);
@@ -72,7 +71,6 @@ internal class PropPatchHandler : RequestHandler
             {
                 var result = await Item.PropertyManager.SetPropertyAsync(
                     Context,
-                    Item,
                     element.Name,
                     null,
                     cancellationToken);
