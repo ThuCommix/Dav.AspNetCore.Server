@@ -1,4 +1,5 @@
 using Dav.AspNetCore.Server.Store.Files;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Dav.AspNetCore.Server.Store;
@@ -39,9 +40,9 @@ public static class WabDavOptionsBuilderExtensions
         var storeOptions = new TOptions();
         if (configureOptions != null)
             configureOptions(storeOptions);
-        
-        builder.Services.TryAddSingleton(storeOptions);
-        builder.Services.TryAddScoped<IStore, TStore>();
+
+        builder.Services.Replace(ServiceDescriptor.Singleton(storeOptions));
+        builder.Services.Replace(ServiceDescriptor.Scoped<IStore, TStore>());
 
         return builder;
     }
