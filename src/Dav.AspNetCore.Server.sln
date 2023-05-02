@@ -1,8 +1,8 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server", "Dav.AspNetCore.Server\Dav.AspNetCore.Server.csproj", "{F858FC28-A09C-4FD1-B22C-B9551F9801F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Example", "Dav.AspNetCore.Server.Example\Dav.AspNetCore.Server.Example.csproj", "{B50547D7-C41A-4394-B0BE-FCFD41497130}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Example", "..\examples\Dav.AspNetCore.Server.Example\Dav.AspNetCore.Server.Example.csproj", "{B50547D7-C41A-4394-B0BE-FCFD41497130}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Tests", "Dav.AspNetCore.Server.Tests\Dav.AspNetCore.Server.Tests.csproj", "{4FE60AF5-8632-46E5-A4B8-E1D00063F516}"
 EndProject
