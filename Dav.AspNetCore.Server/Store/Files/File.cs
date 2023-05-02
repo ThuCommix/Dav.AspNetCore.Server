@@ -136,7 +136,7 @@ public class File : IStoreItem
         }
 
         var result = await destination.CreateItemAsync(name, cancellationToken);
-        if (result.StatusCode != DavStatusCode.Created)
+        if (result.Item == null)
             return ItemResult.Fail(result.StatusCode);
         
         await using var readableStream = await GetReadableStreamAsync(cancellationToken);
@@ -144,6 +144,8 @@ public class File : IStoreItem
         if (statusCode != DavStatusCode.Ok)
             return ItemResult.Fail(statusCode);
 
+        store.ItemCache[result.Item.Uri] = result.Item;
+        
         return item != null 
             ? ItemResult.NoContent(result.Item) 
             : ItemResult.Created(result.Item);

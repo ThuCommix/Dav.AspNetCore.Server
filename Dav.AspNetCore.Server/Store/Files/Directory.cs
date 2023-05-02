@@ -108,6 +108,9 @@ public class Directory : IStoreCollection
         CancellationToken cancellationToken = default)
     {
         var result = await destination.CreateCollectionAsync(name, cancellationToken);
+        if (result.Collection != null)
+            store.ItemCache[result.Collection.Uri] = result.Collection;
+        
         return new ItemResult(result.StatusCode, result.Collection);
     }
 
@@ -127,6 +130,9 @@ public class Directory : IStoreCollection
     /// <returns>The store items.</returns>
     public async Task<IReadOnlyCollection<IStoreItem>> GetItemsAsync(CancellationToken cancellationToken = default)
     {
+        if (store.CollectionCache.TryGetValue(Uri, out var cacheItems) && !store.DisableCaching)
+            return cacheItems;
+        
         var items = new List<IStoreItem>();
 
         var directoryUris = await store.GetDirectoriesAsync(properties.Uri, cancellationToken);
@@ -135,6 +141,7 @@ public class Directory : IStoreCollection
             var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
             var collection = new Directory(store, directoryProperties, LockManager);
             
+            store.ItemCache[collection.Uri] = collection;
             items.Add(collection);
         }
 
@@ -143,9 +150,12 @@ public class Directory : IStoreCollection
         {
             var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
             var item = new File(store, fileProperties, LockManager);
-            
+
+            store.ItemCache[item.Uri] = item;
             items.Add(item);
         }
+
+        store.CollectionCache[Uri] = items;
 
         return items;
     }
@@ -169,6 +179,8 @@ public class Directory : IStoreCollection
         
         var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
         var collection = new Directory(store, directoryProperties, LockManager);
+
+        store.ItemCache[collection.Uri] = collection;
         
         return CollectionResult.Created(collection);
     }
@@ -182,6 +194,8 @@ public class Directory : IStoreCollection
         
         var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
         var item = new File(store, fileProperties, LockManager);
+
+        store.ItemCache[item.Uri] = item;
         
         return new ItemResult(DavStatusCode.Created, item);
     }
@@ -230,12 +244,16 @@ public class Directory : IStoreCollection
             if (await store.DirectoryExistsAsync(uri, cancellationToken))
             {
                 await store.DeleteDirectoryAsync(uri, cancellationToken);
+                store.ItemCache.Remove(uri);
+                
                 return DavStatusCode.NoContent;
             }
 
             if (await store.FileExistsAsync(uri, cancellationToken))
             {
                 await store.DeleteFileAsync(uri, cancellationToken);
+                store.ItemCache.Remove(uri);
+                
                 return DavStatusCode.NoContent;
             }
         }

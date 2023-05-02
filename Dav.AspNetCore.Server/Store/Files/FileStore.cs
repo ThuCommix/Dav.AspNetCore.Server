@@ -16,7 +16,22 @@ public abstract class FileStore : IStore
         
         this.lockManager = lockManager;
     }
+
+    /// <summary>
+    /// Gets the item cache.
+    /// </summary>
+    internal Dictionary<Uri, IStoreItem?> ItemCache { get; } = new();
+
+    /// <summary>
+    /// Gets the collection cache.
+    /// </summary>
+    internal Dictionary<Uri, List<IStoreItem>> CollectionCache { get; } = new();
     
+    /// <summary>
+    /// A value indicating whether caching will be disabled.
+    /// </summary>
+    public bool DisableCaching { get; set; }
+
     /// <summary>
     /// Gets the store item async.
     /// </summary>
@@ -25,16 +40,25 @@ public abstract class FileStore : IStore
     /// <returns>The store item or null.</returns>
     public async Task<IStoreItem?> GetItemAsync(Uri uri, CancellationToken cancellationToken = default)
     {
+        if (ItemCache.TryGetValue(uri, out var cacheItem) && !DisableCaching)
+            return cacheItem;
+        
         if (await DirectoryExistsAsync(uri, cancellationToken))
         {
             var directoryProperties = await GetDirectoryPropertiesAsync(uri, cancellationToken);
-            return new Directory(this, directoryProperties, lockManager);
+            var directory = new Directory(this, directoryProperties, lockManager);
+
+            ItemCache[directory.Uri] = directory;
+            return directory;
         }
 
         if (await FileExistsAsync(uri, cancellationToken))
         {
             var fileProperties = await GetFilePropertiesAsync(uri, cancellationToken);
-            return new File(this, fileProperties, lockManager);
+            var file = new File(this, fileProperties, lockManager);
+
+            ItemCache[file.Uri] = file;
+            return file;
         }
 
         return null;
