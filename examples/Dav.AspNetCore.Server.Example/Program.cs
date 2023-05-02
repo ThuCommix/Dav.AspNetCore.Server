@@ -1,6 +1,6 @@
 using Dav.AspNetCore.Server;
 using Dav.AspNetCore.Server.Authentication;
-using Dav.AspNetCore.Server.Store.Files;
+using Dav.AspNetCore.Server.Store;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>

@@ -1,6 +1,6 @@
 namespace Dav.AspNetCore.Server.Store.Files;
 
-public class LocalFileStoreOptions
+public class LocalFileStoreOptions : StoreOptions
 {
     /// <summary>
     /// Gets or sets the root path.
