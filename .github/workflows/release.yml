@@ -1,0 +1,50 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version'
+        required: true
+        type: string
+      prerelease:
+        description: 'Set as a pre-release'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Test with dotnet
+        run: dotnet test
+      - name: Create pre release package
+        if: ${{ inputs.prerelease == true }}
+        run: dotnet pack Dav.AspNetCore.Server -c Release --include-source -p:PackageVersion=${{ inputs.version }}-pre
+      - name: Create package
+        if: ${{ inputs.prerelease == false }}
+        run: dotnet pack Dav.AspNetCore.Server -c Release --include-source -p:PackageVersion=${{ inputs.version }}
+      - name: Push package
+        run: dotnet nuget push /bin/Release/Dav.AspNetCore.Server.*.nupkg -k ${{ secrets.NUGET_APIKEY }} -s https://api.nuget.org/v3/index.json
+      - name: Create release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          name: 'v${{ inputs.version }}'
+          prerelease: ${{ inputs.prerelease }}
+          tag: 'v${{ inputs.version }}'
+          commit: ${{ github.event.ref }}
+          omitBody: true
+      
