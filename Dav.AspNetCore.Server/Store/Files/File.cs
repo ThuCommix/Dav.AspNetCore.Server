@@ -11,6 +11,42 @@ public class File : IStoreItem
     private readonly FileStore store;
     private readonly FileProperties properties;
 
+    private static readonly AttachedProperty CreationDateProperty = AttachedProperty.CreationDate<File>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
+        isComputed: true);
+
+    private static readonly AttachedProperty DisplayNameProperty = AttachedProperty.DisplayName<File>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
+        isComputed: true);
+
+    private static readonly AttachedProperty LastModifiedProperty = AttachedProperty.LastModified<File>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
+        isComputed: true);
+
+    private static readonly AttachedProperty ContentLengthProperty = AttachedProperty.ContentLength<File>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Length)),
+        isComputed: true);
+
+    private static readonly AttachedProperty ContentTypeProperty = AttachedProperty.ContentType<File>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(GetMimeTypeForFileExtension(item.Uri))),
+        isComputed: true);
+
+    private static readonly AttachedProperty ContentLanguageProperty = AttachedProperty.ContentLanguage<File>(
+        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
+        isComputed: true);
+            
+    private static readonly AttachedProperty EtagProperty = AttachedProperty.Etag<File>(
+        getter: async (_, item, cancellationToken) => PropertyResult.Success(await ComputeEtagAsync(item.store, item.properties.Uri, cancellationToken)),
+        isExpensive: true,
+        isComputed: true);
+
+    private static readonly AttachedProperty ResourceTypeProperty = AttachedProperty.ResourceType<File>(
+        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(null)),
+        isComputed: true);
+
+    private static readonly AttachedProperty SupportedLockProperty = AttachedProperty.SupportedLock<File>();
+    private static readonly AttachedProperty LockDiscoveryProperty = AttachedProperty.LockDiscovery<File>();
+
     /// <summary>
     /// Initializes a new <see cref="File"/> class.
     /// </summary>
@@ -32,41 +68,16 @@ public class File : IStoreItem
         LockManager = lockManager;
         PropertyManager = new PropertyManager(this, new[]
         {
-            AttachedProperty.CreationDate<File>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
-                isComputed: true),
-            
-            AttachedProperty.DisplayName<File>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
-                isComputed: true),
-            
-            AttachedProperty.LastModified<File>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
-                isComputed: true),
-            
-            AttachedProperty.ContentLength<File>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Length)),
-                isComputed: true),
-            
-            AttachedProperty.ContentType<File>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(GetMimeTypeForFileExtension(item.Uri))),
-                isComputed: true),
-            
-            AttachedProperty.ContentLanguage<File>(
-                getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
-                isComputed: true),
-            
-            AttachedProperty.Etag<File>(
-                getter: async (_, item, cancellationToken) => PropertyResult.Success(await ComputeEtagAsync(item.store, item.properties.Uri, cancellationToken)),
-                isExpensive: true,
-                isComputed: true),
-            
-            AttachedProperty.ResourceType<File>(
-                getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(null)),
-                isComputed: true)
-            ,
-            AttachedProperty.SupportedLock<File>(),
-            AttachedProperty.LockDiscovery<File>()
+            CreationDateProperty,
+            DisplayNameProperty,
+            LastModifiedProperty,
+            ContentLengthProperty,
+            ContentTypeProperty,
+            ContentLanguageProperty,
+            EtagProperty,
+            ResourceTypeProperty,
+            SupportedLockProperty,
+            LockDiscoveryProperty
         });
     }
 

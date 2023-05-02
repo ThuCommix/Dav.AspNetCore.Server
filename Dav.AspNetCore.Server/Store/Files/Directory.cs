@@ -12,6 +12,29 @@ public class Directory : IStoreCollection
 
     private static readonly XElement Collection = new(XmlNames.Collection);
 
+    private static readonly AttachedProperty CreationDateProperty = AttachedProperty.CreationDate<Directory>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
+        isComputed: true);
+
+    private static readonly AttachedProperty DisplayNameProperty = AttachedProperty.DisplayName<Directory>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
+        isComputed: true);
+
+    private static readonly AttachedProperty LastModifiedProperty = AttachedProperty.LastModified<Directory>(
+        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
+        isComputed: true);
+
+    private static readonly AttachedProperty ContentLanguageProperty = AttachedProperty.ContentLanguage<Directory>(
+        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
+        isComputed: true);
+
+    private static readonly AttachedProperty ResourceTypeProperty = AttachedProperty.ResourceType<Directory>(
+        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(Collection)),
+        isComputed: true);
+
+    private static readonly AttachedProperty SupportedLockProperty = AttachedProperty.SupportedLock<Directory>();
+    private static readonly AttachedProperty LockDiscoveryProperty = AttachedProperty.LockDiscovery<Directory>();
+
     /// <summary>
     /// Initializes a new <see cref="Directory"/> class.
     /// </summary>
@@ -33,28 +56,13 @@ public class Directory : IStoreCollection
         LockManager = lockManager;
         PropertyManager = new PropertyManager(this, new[]
         {
-            AttachedProperty.CreationDate<Directory>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
-                isComputed: true),
-            
-            AttachedProperty.DisplayName<Directory>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
-                isComputed: true),
-            
-            AttachedProperty.LastModified<Directory>(
-                getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
-                isComputed: true),
-            
-            AttachedProperty.ContentLanguage<Directory>(
-                getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
-                isComputed: true),
-            
-            AttachedProperty.ResourceType<Directory>(
-                getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(Collection)),
-                isComputed: true),
-            
-            AttachedProperty.SupportedLock<Directory>(),
-            AttachedProperty.LockDiscovery<Directory>()
+            CreationDateProperty,
+            DisplayNameProperty,
+            LastModifiedProperty,
+            ContentLanguageProperty,
+            ResourceTypeProperty,
+            SupportedLockProperty,
+            LockDiscoveryProperty
         });
     }
 
