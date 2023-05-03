@@ -1,0 +1,24 @@
+name: Deploy Packages
+
+on:
+  release:
+    types: [published]
+    
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Create packages
+        run: dotnet pack -c Release --include-source
+      - name: Push packages
+        run: dotnet nuget push "**/*.nupkg" --skip-duplicate -k ${{ secrets.NUGET_APIKEY }} -s https://api.nuget.org/v3/index.json

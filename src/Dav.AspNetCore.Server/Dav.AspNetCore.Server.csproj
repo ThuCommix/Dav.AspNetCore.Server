@@ -8,7 +8,7 @@
     
     <PropertyGroup>
         <PackageId>Dav.AspNetCore.Server</PackageId>
-        <PackageVersion>1.0.0-pre</PackageVersion>
+        <PackageVersion>0.0.1-pre</PackageVersion>
         <Authors>Kevin Scholz</Authors>
         <Company>Kevin Scholz</Company>
         <PackageTags>WebDav;AspNetCore;Asp;Dav;AspNetCore WebDav;AspNetCore Dav;Asp WebDav;Asp Dav</PackageTags>
