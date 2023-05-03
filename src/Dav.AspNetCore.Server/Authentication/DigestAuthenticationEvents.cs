@@ -1,27 +1,20 @@
-using System.Security.Claims;
-
 namespace Dav.AspNetCore.Server.Authentication;
 
 public class DigestAuthenticationEvents
 {
-    public delegate Task<string?> RequestPasswordDelegate(
-        DigestAuthenticationContext context, 
+    public delegate Task<string?> PasswordRequestedDelegate(
+        DigestPasswordRequestedContext context, 
         CancellationToken cancellationToken = default);
-    
-    public delegate Task AuthenticatedDelegate(
-        DigestAuthenticationContext context,
-        ClaimsIdentity claimsIdentity, 
-        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invoked when the user name was extracted, and the password is requested to make a hash compare.
+    /// </summary>
+    public PasswordRequestedDelegate? OnPasswordRequested { get; set; }
     
     /// <summary>
-    /// Fired when the password is for a specific user is requested.
+    /// Invoked when the claims identity has been created.
     /// </summary>
-    public RequestPasswordDelegate? OnRequestPassword { get; set; }
-    
-    /// <summary>
-    /// Fires when the user was authenticated.
-    /// </summary>
-    public AuthenticatedDelegate? OnAuthenticated { get; set; }
+    public AuthenticatedDelegate<DigestAuthenticationSchemeOptions>? OnAuthenticated { get; set; }
     
     
 }

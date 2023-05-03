@@ -1,25 +1,18 @@
-using System.Security.Claims;
-
 namespace Dav.AspNetCore.Server.Authentication;
 
 public class BasicAuthenticationEvents
 {
-    public delegate Task<bool> AuthenticateDelegate(
-        BasicAuthenticationContext context, 
+    public delegate Task<bool> AuthenticatingDelegate(
+        BasicAuthenticatingContext context, 
         CancellationToken cancellationToken = default);
-    
-    public delegate Task AuthenticatedDelegate(
-        BasicAuthenticationContext context, 
-        ClaimsIdentity claimsIdentity, 
-        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invoked when the credentials have been extracted.
+    /// </summary>
+    public AuthenticatingDelegate? OnAuthenticating { get; set; }
     
     /// <summary>
-    /// Fired when the authentication should take place.
+    /// Invoked when the claims identity has been created.
     /// </summary>
-    public AuthenticateDelegate? OnAuthenticate { get; set; }
-    
-    /// <summary>
-    /// Fires when the user was authenticated.
-    /// </summary>
-    public AuthenticatedDelegate? OnAuthenticated { get; set; }
+    public AuthenticatedDelegate<BasicAuthenticationSchemeOptions>? OnAuthenticated { get; set; }
 }

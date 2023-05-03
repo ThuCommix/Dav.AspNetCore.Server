@@ -60,17 +60,22 @@ internal class DigestAuthenticationHandler : AuthenticationHandler<DigestAuthent
         if (!parameters.TryGetValue("opaque", out var opaque))
             return AuthenticateResult.NoResult();
 
-        if (Options.Events.OnRequestPassword == null)
-            return AuthenticateResult.NoResult();
-
         if (!Guid.TryParse(opaque, out var opaqueId))
             return AuthenticateResult.Fail("Opaque could not be parsed.");
 
         if (!OpaqueIds.Contains(opaqueId))
             return AuthenticateResult.NoResult();
+        
+        if (Options.Events.OnPasswordRequested == null)
+            return AuthenticateResult.NoResult();
 
-        var digestContext = new DigestAuthenticationContext(userName);
-        var password = await Options.Events.OnRequestPassword(digestContext, Context.RequestAborted);
+        var digestContext = new DigestPasswordRequestedContext(
+            Context,
+            Options,
+            Scheme,
+            userName);
+        
+        var password = await Options.Events.OnPasswordRequested(digestContext, Context.RequestAborted);
 
         if (string.IsNullOrWhiteSpace(password))
             return AuthenticateResult.NoResult();
@@ -101,8 +106,14 @@ internal class DigestAuthenticationHandler : AuthenticationHandler<DigestAuthent
             userName);
 
         var claimsIdentity = new ClaimsIdentity(identity);
+        var authenticatedContext = new AuthenticatedContext<DigestAuthenticationSchemeOptions>(
+            Context,
+            Options,
+            Scheme,
+            claimsIdentity);
+        
         if (Options.Events.OnAuthenticated != null)
-            await Options.Events.OnAuthenticated(digestContext, claimsIdentity, Context.RequestAborted);
+            await Options.Events.OnAuthenticated(authenticatedContext, Context.RequestAborted);
 
         var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
         return AuthenticateResult.Success(new AuthenticationTicket(claimsPrincipal, Scheme.Name));

@@ -36,25 +36,34 @@ internal class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthentic
         if (credentialParts.Length != 2)
             return AuthenticateResult.Fail("Invalid Authorization header format");
 
-        var basicContext = new BasicAuthenticationContext(
+        var authenticatingContext = new BasicAuthenticatingContext(
+            Context,
+            Options,
+            Scheme,
             credentialParts[0], 
             credentialParts[1]);
 
-        if (Options.Events.OnAuthenticate == null)
+        if (Options.Events.OnAuthenticating == null)
             return AuthenticateResult.NoResult();
 
-        var authenticated = await Options.Events.OnAuthenticate(basicContext, Context.RequestAborted);
+        var authenticated = await Options.Events.OnAuthenticating(authenticatingContext, Context.RequestAborted);
         if (!authenticated)
             return AuthenticateResult.NoResult();
 
         var identity = new Identity(
             BasicAuthenticationDefaults.AuthenticationScheme,
             true,
-            basicContext.UserName);
+            authenticatingContext.UserName);
         
         var claimsIdentity = new ClaimsIdentity(identity);
+        var authenticatedContext = new AuthenticatedContext<BasicAuthenticationSchemeOptions>(
+            Context,
+            Options,
+            Scheme,
+            claimsIdentity);
+        
         if (Options.Events.OnAuthenticated != null)
-            await Options.Events.OnAuthenticated(basicContext, claimsIdentity, Context.RequestAborted);
+            await Options.Events.OnAuthenticated(authenticatedContext, Context.RequestAborted);
 
         var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
         return AuthenticateResult.Success(new AuthenticationTicket(claimsPrincipal, Scheme.Name));
