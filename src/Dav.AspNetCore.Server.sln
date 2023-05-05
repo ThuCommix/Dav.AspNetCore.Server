@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFi
 		..\.github\workflows\deploy.yml = ..\.github\workflows\deploy.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Extensions.Sqlite", "Dav.AspNetCore.Server.Extensions.Sqlite\Dav.AspNetCore.Server.Extensions.Sqlite.csproj", "{BED5ADFD-E70A-4E9A-B7AA-14CCA72FF95A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{4FE60AF5-8632-46E5-A4B8-E1D00063F516}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4FE60AF5-8632-46E5-A4B8-E1D00063F516}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4FE60AF5-8632-46E5-A4B8-E1D00063F516}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BED5ADFD-E70A-4E9A-B7AA-14CCA72FF95A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BED5ADFD-E70A-4E9A-B7AA-14CCA72FF95A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BED5ADFD-E70A-4E9A-B7AA-14CCA72FF95A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BED5ADFD-E70A-4E9A-B7AA-14CCA72FF95A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
