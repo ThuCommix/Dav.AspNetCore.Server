@@ -1,8 +1,6 @@
 name: Deploy Packages
 
-on:
-  release:
-    types: [published]
+on: workflow_dispatch
     
 jobs:
   deploy:

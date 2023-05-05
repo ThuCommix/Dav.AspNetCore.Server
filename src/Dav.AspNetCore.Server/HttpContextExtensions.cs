@@ -56,11 +56,13 @@ internal static class HttpContextExtensions
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         
-        if (context.Request.Body == null || 
-            context.Request.Body == Stream.Null)
+        if (context.Request.Body == Stream.Null)
             return null;
 
         if (context.Request.ContentLength == 0)
+            return null;
+
+        if (context.Request.ContentType == null)
             return null;
 
         if (!context.Request.ContentType.Contains("application/xml") &&

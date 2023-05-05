@@ -31,7 +31,8 @@ internal class MoveHandler : RequestHandler
         var destination = WebDavHeaders.Destination;
         if (!string.IsNullOrWhiteSpace(Context.Request.PathBase))
         {
-            destination = new Uri(destination.LocalPath.Substring(Context.Request.PathBase.Value.Length));
+            if (Context.Request.PathBase.HasValue)
+                destination = new Uri(destination.LocalPath.Substring(Context.Request.PathBase.Value.Length));
         }
         
         var overwrite = WebDavHeaders.Overwrite ?? false;
