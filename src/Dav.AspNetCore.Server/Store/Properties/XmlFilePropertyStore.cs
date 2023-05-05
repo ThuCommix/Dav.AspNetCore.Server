@@ -136,7 +136,7 @@ public class XmlFilePropertyStore : IPropertyStore
                     propertyValue = property.FirstNode.NodeType switch
                     {
                         XmlNodeType.Text => property.Value,
-                        XmlNodeType.Element => property.Elements(),
+                        XmlNodeType.Element => property.Elements().ToArray(),
                         _ => propertyValue
                     };
                 }

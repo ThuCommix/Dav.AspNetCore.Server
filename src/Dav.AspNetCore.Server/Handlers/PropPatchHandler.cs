@@ -47,7 +47,7 @@ internal class PropPatchHandler : RequestHandler
                     propertyValue = element.FirstNode.NodeType switch
                     {
                         XmlNodeType.Text => element.Value,
-                        XmlNodeType.Element => element.Elements(),
+                        XmlNodeType.Element => element.Elements().ToArray(),
                         _ => propertyValue
                     };
                 }
