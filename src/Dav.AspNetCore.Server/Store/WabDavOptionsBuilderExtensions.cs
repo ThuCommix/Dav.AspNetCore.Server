@@ -52,4 +52,42 @@ public static class WabDavOptionsBuilderExtensions
 
         return builder;
     }
+
+    /// <summary>
+    /// Adds the xml file property store.
+    /// </summary>
+    /// <param name="builder">The web dav options builder.</param>
+    /// <param name="configureOptions">Used to configure the property store options.</param>
+    /// <returns>The web dav options builder.</returns>
+    public static WebDavOptionsBuilder AddXmlFilePropertyStore(
+        this WebDavOptionsBuilder builder,
+        Action<XmlFilePropertyStoreOptions>? configureOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+        return builder.AddPropertyStore<XmlFilePropertyStoreOptions, XmlFilePropertyStore>(configureOptions);
+    }
+
+    /// <summary>
+    /// Adds a property store.
+    /// </summary>
+    /// <param name="builder">The web dav options builder.</param>
+    /// <param name="configureOptions">Used to configure the property store options.</param>
+    /// <typeparam name="TOptions">The property store options type.</typeparam>
+    /// <typeparam name="TStore">The property store type.</typeparam>
+    /// <returns>The web dav options builder.</returns>
+    public static WebDavOptionsBuilder AddPropertyStore<TOptions, TStore>(
+        this WebDavOptionsBuilder builder,
+        Action<TOptions>? configureOptions = null) where TOptions : PropertyStoreOptions, new() where TStore : class, IPropertyStore
+    {
+        ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+        
+        var storeOptions = new TOptions();
+        if (configureOptions != null)
+            configureOptions(storeOptions);
+        
+        builder.Services.Replace(ServiceDescriptor.Singleton(storeOptions));
+        builder.Services.Replace(ServiceDescriptor.Scoped<IPropertyStore, TStore>());
+        
+        return builder;
+    }
 }

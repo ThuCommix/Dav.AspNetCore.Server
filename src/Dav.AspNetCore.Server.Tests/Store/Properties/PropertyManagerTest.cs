@@ -387,17 +387,23 @@ public class PropertyManagerTest
     public async Task SetPropertyAsync_WithPropertyStoreMissingProperty_ReturnsNotFound()
     {
         // arrange
+        var propertyName = XName.Get("MyProperty");
         var storeItem = new TestStoreItem(new Uri("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
-        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<PropertyData>());
+        propertyStore.Setup(s => s.SetPropertyAsync(
+            storeItem,
+            propertyName,
+            It.IsAny<PropertyMetadata>(),
+            false,
+            null,
+            It.IsAny<CancellationToken>())).ReturnsAsync(false);
         
         var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
 
         // act
-        var result = await propertyManager.SetPropertyAsync(storeItem, XName.Get("MyProperty"), null);
+        var result = await propertyManager.SetPropertyAsync(storeItem, propertyName, null);
 
         // assert
         Assert.Equal(DavStatusCode.NotFound, result);
@@ -417,15 +423,13 @@ public class PropertyManagerTest
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
-        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new PropertyData(property.Name, null) });
-
         propertyStore.Setup(s => s.SetPropertyAsync(
             storeItem,
             property.Name,
             It.IsAny<PropertyMetadata>(),
+            true,
             null,
-            It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
+            It.IsAny<CancellationToken>())).ReturnsAsync(true);
         
         var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
 

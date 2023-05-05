@@ -140,21 +140,21 @@ public class PropertyManager : IPropertyManager
         if (propertyStore == null)
             return DavStatusCode.NotFound;
         
-        var propertyDataList = await propertyStore.GetPropertiesAsync(item, cancellationToken);
-        var propertyData = propertyDataList.FirstOrDefault(x => x.Name == name);
-        if (propertyData == null)
-            return DavStatusCode.NotFound;
-
-        await propertyStore.SetPropertyAsync(
+        var result = await propertyStore.SetPropertyAsync(
             item, 
-            propertyData.Name, 
-            PropertyMetadata.Default, 
+            name, 
+            PropertyMetadata.Default,
+            property != null,
             value, 
             cancellationToken);
 
-        CreateCachedResult(item, name, DavStatusCode.Ok, value);
+        if (result)
+        {
+            CreateCachedResult(item, name, DavStatusCode.Ok, value);
+            return DavStatusCode.Ok;
+        }
         
-        return DavStatusCode.Ok;
+        return DavStatusCode.NotFound;
     }
 
     /// <summary>
