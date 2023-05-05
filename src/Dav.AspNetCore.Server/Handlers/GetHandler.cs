@@ -85,11 +85,11 @@ internal class GetHandler : RequestHandler
         XName propertyName,
         CancellationToken cancellationToken = default)
     {
-        var metadata = item.PropertyManager[propertyName];
-        if (metadata == null || metadata.IsExpensive)
+        var metadata = PropertyManager.GetPropertyMetadata(item, propertyName);
+        if (metadata == null || metadata.Expensive)
             return null;
 
-        var result = await item.PropertyManager.GetPropertyAsync(Context, propertyName, cancellationToken);
+        var result = await PropertyManager.GetPropertyAsync(item, propertyName, cancellationToken);
         return (string?)result.Value;
     }
     

@@ -52,8 +52,8 @@ internal class PropPatchHandler : RequestHandler
                     };
                 }
                 
-                var result = await Item.PropertyManager.SetPropertyAsync(
-                    Context,
+                var result = await PropertyManager.SetPropertyAsync(
+                    Item,
                     element.Name,
                     propertyValue,
                     cancellationToken);
@@ -69,8 +69,8 @@ internal class PropPatchHandler : RequestHandler
         {
             foreach (var element in removes)
             {
-                var result = await Item.PropertyManager.SetPropertyAsync(
-                    Context,
+                var result = await PropertyManager.SetPropertyAsync(
+                    Item,
                     element.Name,
                     null,
                     cancellationToken);

@@ -1,6 +1,9 @@
 using Dav.AspNetCore.Server.Store.Files;
+using Dav.AspNetCore.Server.Store.Properties;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Directory = Dav.AspNetCore.Server.Store.Files.Directory;
+using File = Dav.AspNetCore.Server.Store.Files.File;
 
 namespace Dav.AspNetCore.Server.Store;
 
@@ -18,6 +21,9 @@ public static class WabDavOptionsBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
         builder.AddStore<LocalFileStoreOptions, LocalFileStore>(configureOptions);
+
+        Directory.RegisterProperties();
+        File.RegisterProperties();
         
         return builder;
     }

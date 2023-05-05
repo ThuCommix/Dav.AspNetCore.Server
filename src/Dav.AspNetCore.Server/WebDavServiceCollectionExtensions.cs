@@ -1,4 +1,5 @@
 using Dav.AspNetCore.Server.Locks;
+using Dav.AspNetCore.Server.Store.Properties;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -22,7 +23,10 @@ public static class WebDavServiceCollectionExtensions
         var builder = new WebDavOptionsBuilder(services);
         webDavBuilder(builder);
         
+        services.AddHttpContextAccessor();
+        
         services.TryAddSingleton<WebDavOptions>(builder);
+        services.TryAddScoped<IPropertyManager, PropertyManager>();
         services.TryAddSingleton<ILockManager>(new InMemoryLockManager(Array.Empty<ResourceLock>()));
 
         return services;

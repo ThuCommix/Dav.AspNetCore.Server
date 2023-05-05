@@ -1,6 +1,3 @@
-using Dav.AspNetCore.Server.Locks;
-using Dav.AspNetCore.Server.Store.Properties;
-
 namespace Dav.AspNetCore.Server.Store;
 
 public interface IStoreItem
@@ -9,16 +6,6 @@ public interface IStoreItem
     /// Gets the uri.
     /// </summary>
     Uri Uri { get; }
-    
-    /// <summary>
-    /// Gets the property manager.
-    /// </summary>
-    IPropertyManager PropertyManager { get; }
-    
-    /// <summary>
-    /// Gets the lock manager.
-    /// </summary>
-    ILockManager LockManager { get; }
 
     /// <summary>
     /// Gets a readable stream async.

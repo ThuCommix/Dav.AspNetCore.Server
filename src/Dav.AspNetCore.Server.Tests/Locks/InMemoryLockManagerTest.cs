@@ -1,7 +1,5 @@
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Locks;
-using Dav.AspNetCore.Server.Store;
-using Dav.AspNetCore.Server.Store.Properties;
 using Xunit;
 
 namespace Dav.AspNetCore.Server.Tests.Locks;
@@ -300,7 +298,7 @@ public class InMemoryLockManagerTest
     {
         // arrange
         var memoryLockManager = new InMemoryLockManager(Array.Empty<ResourceLock>());
-        var item = new TestStoreItem(new Uri("/test.txt"), memoryLockManager);
+        var item = new TestStoreItem(new Uri("/test.txt"));
 
         // act
         var result = await memoryLockManager.GetSupportedLocksAsync(item);
@@ -309,26 +307,5 @@ public class InMemoryLockManagerTest
         Assert.Equal(2, result.Count);
         Assert.Contains(LockType.Exclusive, result);
         Assert.Contains(LockType.Shared, result);
-    }
-
-    private record TestStoreItem(Uri Uri, ILockManager LockManager) : IStoreItem
-    {
-        public IPropertyManager PropertyManager 
-            => new PropertyManager(this, Array.Empty<AttachedProperty<TestStoreItem>>());
-        
-        public Task<Stream> GetReadableStreamAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<DavStatusCode> WriteDataAsync(Stream stream, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ItemResult> CopyAsync(IStoreCollection destination, string name, bool overwrite, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

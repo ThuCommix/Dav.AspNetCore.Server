@@ -1,5 +1,3 @@
-using Dav.AspNetCore.Server.Locks;
-
 namespace Dav.AspNetCore.Server.Store.Files;
 
 public class LocalFileStore : FileStore
@@ -10,11 +8,7 @@ public class LocalFileStore : FileStore
     /// Initializes a new <see cref="LocalFileStore"/> class.
     /// </summary>
     /// <param name="options">The local file store options.</param>
-    /// <param name="lockManager">The lock manager.</param>
-    public LocalFileStore(
-        LocalFileStoreOptions options,
-        ILockManager lockManager) 
-        : base(lockManager)
+    public LocalFileStore(LocalFileStoreOptions options)
     {
         ArgumentNullException.ThrowIfNull(options, nameof(options));
         this.options = options;

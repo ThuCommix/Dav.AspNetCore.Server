@@ -110,18 +110,25 @@ internal class PropFindHandler : RequestHandler
         CancellationToken cancellationToken = default)
     {
         if (request.OnlyPropertyNames)
-            return item.PropertyManager.Properties
-                .Select(x => x.Name)
-                .ToDictionary(x => x, _ => new PropertyResult(DavStatusCode.Ok, null));
+        {
+            var propertyNames = await PropertyManager.GetPropertyNamesAsync(item, cancellationToken);
+            return propertyNames.ToDictionary(x => x, _ => new PropertyResult(DavStatusCode.Ok));
+        }
 
         var propertyValues = new Dictionary<XName, PropertyResult>();
         var properties = new List<XName>();
 
         // add all non-expensive properties
         if (request.AllProperties) 
-            properties.AddRange(item.PropertyManager.Properties
-                .Where(x => !x.IsExpensive)
-                .Select(x => x.Name));
+        {
+            var propertyNames = await PropertyManager.GetPropertyNamesAsync(item, cancellationToken);
+            foreach (var propertyName in propertyNames)
+            {
+                var propertyMetadata = PropertyManager.GetPropertyMetadata(item, propertyName);
+                if (propertyMetadata == null || !propertyMetadata.Expensive)
+                    properties.Add(propertyName);
+            }
+        }
 
         // this will also contain properties which are included explicitly
         foreach (var propertyName in request.Properties)
@@ -134,12 +141,12 @@ internal class PropFindHandler : RequestHandler
         {
             try
             {
-                var propertyValue = await item.PropertyManager.GetPropertyAsync(Context, propertyName, cancellationToken);
+                var propertyValue = await PropertyManager.GetPropertyAsync(item, propertyName, cancellationToken);
                 propertyValues.Add(propertyName, propertyValue);
             }
             catch
             {
-                propertyValues.Add(propertyName, PropertyResult.Fail(DavStatusCode.InternalServerError));
+                propertyValues.Add(propertyName, new PropertyResult(DavStatusCode.InternalServerError));
             }
         }
 

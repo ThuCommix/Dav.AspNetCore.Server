@@ -1,22 +1,7 @@
-using Dav.AspNetCore.Server.Locks;
-
 namespace Dav.AspNetCore.Server.Store.Files;
 
 public abstract class FileStore : IStore
 {
-    private readonly ILockManager lockManager;
-
-    /// <summary>
-    /// Initializes a new <see cref="FileStore"/> class.
-    /// </summary>
-    /// <param name="lockManager">The lock manager.</param>
-    protected FileStore(ILockManager lockManager)
-    {
-        ArgumentNullException.ThrowIfNull(lockManager, nameof(lockManager));
-        
-        this.lockManager = lockManager;
-    }
-
     /// <summary>
     /// Gets the item cache.
     /// </summary>
@@ -46,7 +31,7 @@ public abstract class FileStore : IStore
         if (await DirectoryExistsAsync(uri, cancellationToken))
         {
             var directoryProperties = await GetDirectoryPropertiesAsync(uri, cancellationToken);
-            var directory = new Directory(this, directoryProperties, lockManager);
+            var directory = new Directory(this, directoryProperties);
 
             ItemCache[directory.Uri] = directory;
             return directory;
@@ -55,7 +40,7 @@ public abstract class FileStore : IStore
         if (await FileExistsAsync(uri, cancellationToken))
         {
             var fileProperties = await GetFilePropertiesAsync(uri, cancellationToken);
-            var file = new File(this, fileProperties, lockManager);
+            var file = new File(this, fileProperties);
 
             ItemCache[file.Uri] = file;
             return file;

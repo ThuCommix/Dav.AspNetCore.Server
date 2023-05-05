@@ -26,6 +26,9 @@ public enum DavStatusCode
     [DavStatusCode("Bad Request")]
     BadRequest = StatusCodes.Status400BadRequest,
     
+    [DavStatusCode("Unauthorized")]
+    Unauthorized = StatusCodes.Status401Unauthorized,
+    
     [DavStatusCode("Forbidden")]
     Forbidden = StatusCodes.Status403Forbidden,
     
@@ -44,8 +47,14 @@ public enum DavStatusCode
     [DavStatusCode("Locked")]
     Locked = StatusCodes.Status423Locked,
     
+    [DavStatusCode("Failed Dependency")]
+    FailedDependency = StatusCodes.Status424FailedDependency,
+    
     [DavStatusCode("Internal Server Error")]
     InternalServerError = StatusCodes.Status500InternalServerError,
+    
+    [DavStatusCode("Insufficient Storage")]
+    InsufficientStorage = StatusCodes.Status507InsufficientStorage,
 }
 
 internal static class DavStatusCodeExtensions

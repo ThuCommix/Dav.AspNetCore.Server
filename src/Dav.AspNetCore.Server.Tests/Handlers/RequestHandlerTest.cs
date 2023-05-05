@@ -23,9 +23,11 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
         
         var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
         httpContext.Setup(s => s.Request.Path).Returns(new PathString("/test.txt"));
@@ -63,6 +65,7 @@ public class RequestHandlerTest
         collection.VerifyAll();
         item.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
 
     [Fact]
@@ -96,9 +99,11 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
         
         var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
         httpContext.Setup(s => s.Request.Path).Returns(new PathString("/"));
@@ -124,6 +129,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
 
     [Theory]
@@ -164,8 +170,11 @@ public class RequestHandlerTest
                 .ReturnsAsync(new[] { resourceLock });
         }
 
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var responseStream = new MemoryStream();
         
@@ -199,6 +208,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Fact]
@@ -225,8 +235,11 @@ public class RequestHandlerTest
         lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
         
         var headers = new HeaderDictionary
         {
@@ -254,6 +267,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Theory]
@@ -292,15 +306,14 @@ public class RequestHandlerTest
         }
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemEtag));
-
-        collection.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
+        propertyManager.Setup(s => s.GetPropertyAsync(collection.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemEtag));
 
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
         
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
         store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
@@ -344,15 +357,14 @@ public class RequestHandlerTest
         httpContext.SetupSet(s => s.Response.StatusCode = StatusCodes.Status412PreconditionFailed);
         
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemEtag));
-
-        collection.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
+        propertyManager.Setup(s => s.GetPropertyAsync(collection.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemEtag));
 
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
         
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
         store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
@@ -397,8 +409,11 @@ public class RequestHandlerTest
         lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var token = matchToken ? resourceLock.Id.AbsoluteUri : "B";
         var headers = new HeaderDictionary
@@ -435,6 +450,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
 
     [Fact]
@@ -461,8 +477,11 @@ public class RequestHandlerTest
         lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
         
         var headers = new HeaderDictionary
         {
@@ -490,6 +509,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Fact]
@@ -500,9 +520,11 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var headers = new HeaderDictionary
         {
@@ -533,6 +555,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Theory]
@@ -573,11 +596,11 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemEtag));
+        propertyManager.Setup(s => s.GetPropertyAsync(item.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemEtag));
 
-        item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
-                    
+        requestServices.AddSingleton(propertyManager.Object);
+
         var collectionUri = new Uri("/");
         var collection = new Mock<IStoreCollection>();
         collection.Setup(s => s.Uri).Returns(collectionUri);
@@ -657,10 +680,10 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemEtag));
+        propertyManager.Setup(s => s.GetPropertyAsync(item.Object, XmlNames.GetEtag, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemEtag));
 
-        item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
                     
         var collectionUri = new Uri("/");
         var collection = new Mock<IStoreCollection>();
@@ -691,9 +714,11 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var headers = new HeaderDictionary
         {
@@ -727,6 +752,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Theory]
@@ -766,12 +792,11 @@ public class RequestHandlerTest
         }
 
         var item = new Mock<IStoreItem>();
-        
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemModified.ToString("R")));
+        propertyManager.Setup(s => s.GetPropertyAsync(item.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemModified.ToString("R")));
 
-        item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var collectionUri = new Uri("/");
         var collection = new Mock<IStoreCollection>();
@@ -830,12 +855,11 @@ public class RequestHandlerTest
         }
 
         var item = new Mock<IStoreItem>();
-        
         var propertyManager = new Mock<IPropertyManager>();
-        propertyManager.Setup(s => s.GetPropertyAsync(httpContext.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(PropertyResult.Success(itemModified.ToString("R")));
+        propertyManager.Setup(s => s.GetPropertyAsync(item.Object, XmlNames.GetLastModified, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PropertyResult(DavStatusCode.Ok, itemModified.ToString("R")));
 
-        item.Setup(s => s.PropertyManager).Returns(propertyManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var collectionUri = new Uri("/");
         var collection = new Mock<IStoreCollection>();
@@ -889,8 +913,11 @@ public class RequestHandlerTest
                 .ReturnsAsync(new List<ResourceLock>());
         }
 
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
         
         var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
         httpContext.Setup(s => s.Request.Path).Returns(new PathString("/"));
@@ -916,6 +943,7 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
     }
     
     [Theory]
@@ -942,8 +970,11 @@ public class RequestHandlerTest
         lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
 
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+        
         requestServices.AddSingleton(options);
         requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
 
         var token = resourceLock.Id.AbsoluteUri;
         if (!tokenMatch)
@@ -979,6 +1010,68 @@ public class RequestHandlerTest
         httpContext.VerifyAll();
         collection.VerifyAll();
         store.VerifyAll();
+        propertyManager.VerifyAll();
+    }
+    
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task HandleRequestAsync_PropertyStore_CallCommitChangesAsync(bool withPropertyStore)
+    {
+        // arrange
+        var requestServices = new ServiceCollection();
+
+        var options = new WebDavOptions();
+        var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
+        var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
+
+        Mock<IPropertyStore>? propertyStore = null;
+        if (withPropertyStore)
+        {
+            propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+            propertyStore.Setup(s => s.CommitChangesAsync(It.IsAny<CancellationToken>()))
+                .Returns(ValueTask.CompletedTask);
+                
+            requestServices.AddSingleton(propertyStore.Object);
+        }
+
+        requestServices.AddSingleton(options);
+        requestServices.AddSingleton(lockManager.Object);
+        requestServices.AddSingleton(propertyManager.Object);
+
+        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
+        httpContext.Setup(s => s.Request.Path).Returns(new PathString("/test.txt"));
+        httpContext.Setup(s => s.Request.Headers).Returns(new HeaderDictionary());
+        httpContext.Setup(s => s.Request.Method).Returns(WebDavMethods.Get);
+        httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
+
+        var item = new Mock<IStoreItem>();
+        
+        var collectionUri = new Uri("/");
+        var collection = new Mock<IStoreCollection>();
+        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
+        
+        var store = new Mock<IStore>(MockBehavior.Strict);
+        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+
+        var requestHandler = new RequestHandlerImpl();
+
+        // act
+        await requestHandler.HandleRequestAsync(httpContext.Object, store.Object);
+        
+        // assert
+        Assert.True(requestHandler.OverrideCalled);
+        
+        lockManager.VerifyAll();
+        httpContext.VerifyAll();
+        collection.VerifyAll();
+        item.VerifyAll();
+        store.VerifyAll();
+        propertyManager.VerifyAll();
+
+        if (propertyStore != null)
+            propertyStore.VerifyAll();
     }
 
     private static T GetProtectedProperty<T>(RequestHandler handler, string propertyName)

@@ -1,6 +1,6 @@
 using System.Globalization;
+using System.Xml;
 using System.Xml.Linq;
-using Dav.AspNetCore.Server.Locks;
 using Dav.AspNetCore.Server.Store.Properties;
 
 namespace Dav.AspNetCore.Server.Store.Files;
@@ -11,75 +11,27 @@ public class Directory : IStoreCollection
     private readonly DirectoryProperties properties;
 
     private static readonly XElement Collection = new(XmlNames.Collection);
-
-    private static readonly AttachedProperty CreationDateProperty = AttachedProperty.CreationDate<Directory>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
-        isComputed: true);
-
-    private static readonly AttachedProperty DisplayNameProperty = AttachedProperty.DisplayName<Directory>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
-        isComputed: true);
-
-    private static readonly AttachedProperty LastModifiedProperty = AttachedProperty.LastModified<Directory>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
-        isComputed: true);
-
-    private static readonly AttachedProperty ContentLanguageProperty = AttachedProperty.ContentLanguage<Directory>(
-        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
-        isComputed: true);
-
-    private static readonly AttachedProperty ResourceTypeProperty = AttachedProperty.ResourceType<Directory>(
-        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(Collection)),
-        isComputed: true);
-
-    private static readonly AttachedProperty SupportedLockProperty = AttachedProperty.SupportedLock<Directory>();
-    private static readonly AttachedProperty LockDiscoveryProperty = AttachedProperty.LockDiscovery<Directory>();
-
+    
     /// <summary>
     /// Initializes a new <see cref="Directory"/> class.
     /// </summary>
     /// <param name="store">The file store.</param>
     /// <param name="properties">The file properties.</param>
-    /// <param name="lockManager">The lock manager.</param>
     public Directory(
         FileStore store,
-        DirectoryProperties properties,
-        ILockManager lockManager)
+        DirectoryProperties properties)
     {
         ArgumentNullException.ThrowIfNull(store, nameof(store));
         ArgumentNullException.ThrowIfNull(properties, nameof(properties));
-        ArgumentNullException.ThrowIfNull(lockManager, nameof(lockManager));
 
         this.store = store;
         this.properties = properties;
-        
-        LockManager = lockManager;
-        PropertyManager = new PropertyManager(this, new[]
-        {
-            CreationDateProperty,
-            DisplayNameProperty,
-            LastModifiedProperty,
-            ContentLanguageProperty,
-            ResourceTypeProperty,
-            SupportedLockProperty,
-            LockDiscoveryProperty
-        });
     }
 
     /// <summary>
     /// Gets the uri.
     /// </summary>
     public Uri Uri => properties.Uri;
-
-    /// <summary>
-    /// Gets the property manager.
-    /// </summary>
-    public IPropertyManager PropertyManager { get; }
-
-    /// <summary>
-    /// Gets the lock manager.
-    /// </summary>
-    public ILockManager LockManager { get; }
 
     /// <summary>
     /// Gets a readable stream async.
@@ -147,7 +99,7 @@ public class Directory : IStoreCollection
         foreach (var uri in directoryUris)
         {
             var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
-            var collection = new Directory(store, directoryProperties, LockManager);
+            var collection = new Directory(store, directoryProperties);
             
             store.ItemCache[collection.Uri] = collection;
             items.Add(collection);
@@ -157,7 +109,7 @@ public class Directory : IStoreCollection
         foreach (var uri in fileUris)
         {
             var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
-            var item = new File(store, fileProperties, LockManager);
+            var item = new File(store, fileProperties);
 
             store.ItemCache[item.Uri] = item;
             items.Add(item);
@@ -186,7 +138,7 @@ public class Directory : IStoreCollection
         await store.CreateDirectoryAsync(uri, cancellationToken);
         
         var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
-        var collection = new Directory(store, directoryProperties, LockManager);
+        var collection = new Directory(store, directoryProperties);
 
         store.ItemCache[collection.Uri] = collection;
         
@@ -201,7 +153,7 @@ public class Directory : IStoreCollection
         await (await store.OpenFileStreamAsync(uri, OpenFileMode.Write, cancellationToken)).DisposeAsync();
         
         var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
-        var item = new File(store, fileProperties, LockManager);
+        var item = new File(store, fileProperties);
 
         store.ItemCache[item.Uri] = item;
         
@@ -275,5 +227,56 @@ public class Directory : IStoreCollection
         }
         
         return DavStatusCode.NoContent;
+    }
+
+    internal static void RegisterProperties()
+    {
+        Property.RegisterProperty<Directory>(
+            XmlNames.CreationDate,
+            read: (context, _) =>
+            {
+                context.SetResult(XmlConvert.ToString(((Directory)context.Item).properties.Created, XmlDateTimeSerializationMode.Utc)); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<Directory>(
+            XmlNames.DisplayName,
+            read: (context, _) =>
+            {
+                context.SetResult(((Directory)context.Item).properties.Name); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<Directory>(
+            XmlNames.GetLastModified,
+            read: (context, _) =>
+            {
+                context.SetResult(((Directory)context.Item).properties.LastModified.ToString("R")); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<Directory>(
+            XmlNames.GetContentLanguage,
+            read: (context, _) =>
+            {
+                context.SetResult(CultureInfo.CurrentCulture.TwoLetterISOLanguageName); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<Directory>(
+            XmlNames.ResourceType,
+            read: (context, _) =>
+            {
+                context.SetResult(Collection); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+
+        Property.RegisterSupportedLockProperty<Directory>();
+        Property.RegisterLockDiscoveryProperty<Directory>();
     }
 }

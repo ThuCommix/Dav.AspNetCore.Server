@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using Dav.AspNetCore.Server.Locks;
+using System.Xml;
 using Dav.AspNetCore.Server.Store.Properties;
 using Microsoft.AspNetCore.StaticFiles;
 
@@ -10,91 +10,27 @@ public class File : IStoreItem
 {
     private readonly FileStore store;
     private readonly FileProperties properties;
-
-    private static readonly AttachedProperty CreationDateProperty = AttachedProperty.CreationDate<File>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Created)),
-        isComputed: true);
-
-    private static readonly AttachedProperty DisplayNameProperty = AttachedProperty.DisplayName<File>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Name)),
-        isComputed: true);
-
-    private static readonly AttachedProperty LastModifiedProperty = AttachedProperty.LastModified<File>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.LastModified)),
-        isComputed: true);
-
-    private static readonly AttachedProperty ContentLengthProperty = AttachedProperty.ContentLength<File>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(item.properties.Length)),
-        isComputed: true);
-
-    private static readonly AttachedProperty ContentTypeProperty = AttachedProperty.ContentType<File>(
-        getter: (_, item, _) => ValueTask.FromResult(PropertyResult.Success(GetMimeTypeForFileExtension(item.Uri))),
-        isComputed: true);
-
-    private static readonly AttachedProperty ContentLanguageProperty = AttachedProperty.ContentLanguage<File>(
-        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(CultureInfo.CurrentCulture.TwoLetterISOLanguageName)),
-        isComputed: true);
-            
-    private static readonly AttachedProperty EtagProperty = AttachedProperty.Etag<File>(
-        getter: async (_, item, cancellationToken) => PropertyResult.Success(await ComputeEtagAsync(item.store, item.properties.Uri, cancellationToken)),
-        isExpensive: true,
-        isComputed: true);
-
-    private static readonly AttachedProperty ResourceTypeProperty = AttachedProperty.ResourceType<File>(
-        getter: (_, _, _) => ValueTask.FromResult(PropertyResult.Success(null)),
-        isComputed: true);
-
-    private static readonly AttachedProperty SupportedLockProperty = AttachedProperty.SupportedLock<File>();
-    private static readonly AttachedProperty LockDiscoveryProperty = AttachedProperty.LockDiscovery<File>();
-
+    
     /// <summary>
     /// Initializes a new <see cref="File"/> class.
     /// </summary>
     /// <param name="store">The file store</param>
     /// <param name="properties">The file properties.</param>
-    /// <param name="lockManager">The lock manager.</param>
     public File(
         FileStore store,
-        FileProperties properties,
-        ILockManager lockManager)
+        FileProperties properties)
     {
         ArgumentNullException.ThrowIfNull(store, nameof(store));
         ArgumentNullException.ThrowIfNull(properties, nameof(properties));
-        ArgumentNullException.ThrowIfNull(lockManager, nameof(lockManager));
 
         this.store = store;
         this.properties = properties;
-        
-        LockManager = lockManager;
-        PropertyManager = new PropertyManager(this, new[]
-        {
-            CreationDateProperty,
-            DisplayNameProperty,
-            LastModifiedProperty,
-            ContentLengthProperty,
-            ContentTypeProperty,
-            ContentLanguageProperty,
-            EtagProperty,
-            ResourceTypeProperty,
-            SupportedLockProperty,
-            LockDiscoveryProperty
-        });
     }
 
     /// <summary>
     /// Gets the uri.
     /// </summary>
     public Uri Uri => properties.Uri;
-
-    /// <summary>
-    /// Gets the property manager.
-    /// </summary>
-    public IPropertyManager PropertyManager { get; }
-
-    /// <summary>
-    /// Gets the lock manager.
-    /// </summary>
-    public ILockManager LockManager { get; }
 
     /// <summary>
     /// Gets a readable stream async.
@@ -183,5 +119,85 @@ public class File : IStoreItem
         var hash = await algorithm.ComputeHashAsync(fileStream, cancellationToken);
 
         return string.Concat(Array.ConvertAll(hash, h => h.ToString("X2")));
+    }
+    
+    internal static void RegisterProperties()
+    {
+        Property.RegisterProperty<File>(
+            XmlNames.CreationDate,
+            read: (context, _) =>
+            {
+                context.SetResult(XmlConvert.ToString(((File)context.Item).properties.Created, XmlDateTimeSerializationMode.Utc)); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.DisplayName,
+            read: (context, _) =>
+            {
+                context.SetResult(((File)context.Item).properties.Name); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.GetLastModified,
+            read: (context, _) =>
+            {
+                context.SetResult(((File)context.Item).properties.LastModified.ToString("R")); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.GetContentLength,
+            read: (context, _) =>
+            {
+                context.SetResult(((File)context.Item).properties.Length.ToString()); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.GetContentType,
+            read: (context, _) =>
+            {
+                context.SetResult(GetMimeTypeForFileExtension(context.Item.Uri)); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.GetContentLanguage,
+            read: (context, _) =>
+            {
+                context.SetResult(CultureInfo.CurrentCulture.TwoLetterISOLanguageName); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.GetEtag,
+            read: async (context, cancellationToken) =>
+            {
+                var fileItem = (File)context.Item;
+                var etag = await ComputeEtagAsync(fileItem.store, fileItem.properties.Uri, cancellationToken);
+                
+                context.SetResult(etag);
+            },
+            metadata: new PropertyMetadata(Expensive: true, Computed: true));
+        
+        Property.RegisterProperty<File>(
+            XmlNames.ResourceType,
+            read: (context, _) =>
+            {
+                context.SetResult(null); 
+                return ValueTask.CompletedTask;
+            },
+            metadata: new PropertyMetadata(Computed: true));
+
+        Property.RegisterSupportedLockProperty<File>();
+        Property.RegisterLockDiscoveryProperty<File>();
     }
 }

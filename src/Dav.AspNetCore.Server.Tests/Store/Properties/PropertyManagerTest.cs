@@ -1,8 +1,5 @@
 using System.Xml.Linq;
-using Dav.AspNetCore.Server.Store;
 using Dav.AspNetCore.Server.Store.Properties;
-using Dav.AspNetCore.Server.Store.Properties.Converters;
-using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
 
@@ -10,362 +7,435 @@ namespace Dav.AspNetCore.Server.Tests.Store.Properties;
 
 public class PropertyManagerTest
 {
-    [Fact]
-    public void Indexer_UnknownProperty_ReturnsNull()
+    public PropertyManagerTest()
     {
-        // arrange
-        var item = new Mock<IStoreItem>();
-        var propertyManager = new PropertyManager(item.Object);
-
-        // act
-        var metadata = propertyManager[XName.Get("MyProperty")];
-
-        // assert
-        Assert.Null(metadata);
+        Property.Registrations.Clear();
     }
     
     [Fact]
-    public void Indexer_KnownProperty_ReturnsPropertyMetadata()
+    public void GetPropertyMetadata_ExistingProperty_ReturnsPropertyMetadata()
     {
         // arrange
-        var item = new Mock<IStoreItem>();
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(
+                DefaultValue: 9,
+                Expensive: true,
+                Protected: true,
+                Computed: true));
+        
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        var propertyManager = new PropertyManager(serviceProvider.Object);
 
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName);
-
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        // act
-        var metadata = propertyManager[XName.Get("MyProperty")];
-
-        // assert
-        Assert.NotNull(metadata);
-    }
-
-    [Fact]
-    public void Constructor_SetsProperties()
-    {
-        // arrange
-        var item = new Mock<IStoreItem>();
-
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName);
+        var storeItem = new TestStoreItem(new Uri("/"));
 
         // act
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
+        var propertyMetadata = propertyManager.GetPropertyMetadata(storeItem, property.Name);
 
         // assert
-        Assert.Single(propertyManager.Properties);
+        Assert.NotNull(propertyMetadata);
+        Assert.Equal(property.Metadata.DefaultValue, propertyMetadata.DefaultValue);
+        Assert.Equal(property.Metadata.Expensive, propertyMetadata.Expensive);
+        Assert.Equal(property.Metadata.Protected, propertyMetadata.Protected);
+        Assert.Equal(property.Metadata.Computed, propertyMetadata.Computed);
+        
+        serviceProvider.VerifyAll();
     }
     
     [Fact]
-    public void AttachProperty_AlreadyAttached_Throws()
+    public void GetPropertyMetadata_MissingProperty_ReturnsNull()
     {
         // arrange
-        var item = new Mock<IStoreItem>();
+        var serviceProviderMock = new Mock<IServiceProvider>(MockBehavior.Strict);
+        var propertyManager = new PropertyManager(serviceProviderMock.Object);
 
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName);
-
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
+        var storeItem = new TestStoreItem(new Uri("/"));
 
         // act
-        Assert.Throws<InvalidOperationException>(() => propertyManager.AttachProperty(attachedProperty));
+        var propertyMetadata = propertyManager.GetPropertyMetadata(storeItem, XName.Get("MyProperty"));
+
+        // assert
+        Assert.Null(propertyMetadata);
+        
+        serviceProviderMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetPropertyNamesAsync_WithoutPropertyStore_ReturnsRegisteredProperties()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(
+                DefaultValue: 9,
+                Expensive: true,
+                Protected: true,
+                Computed: true));
+        
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+
+        var storeItem = new TestStoreItem(new Uri("/"));
+        
+        // act
+        var results = await propertyManager.GetPropertyNamesAsync(storeItem);
+
+        // assert
+        Assert.Single(results);
+        Assert.Equal(property.Name, results.First());
+        
+        serviceProvider.VerifyAll();
     }
     
     [Fact]
-    public void AttachProperty_NewProperty_UpdatesPropertyMetadata()
+    public async Task GetPropertyNamesAsync_WithPropertyStore_ReturnsRegisteredProperties()
     {
         // arrange
-        var item = new Mock<IStoreItem>();
-
-        var propertyName1 = XName.Get("MyProperty1");
-        var attachedProperty1 = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName1);
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(
+                DefaultValue: 9,
+                Expensive: true,
+                Protected: true,
+                Computed: true));
         
-        var propertyName2 = XName.Get("MyProperty2");
-        var attachedProperty2 = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName2);
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty1 });
+        var property2 = XName.Get("MyProperty2");
+        var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PropertyData(property2, null) });
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
 
         // act
-        propertyManager.AttachProperty(attachedProperty2);
+        var results = await propertyManager.GetPropertyNamesAsync(storeItem);
 
         // assert
-        Assert.Equal(2, propertyManager.Properties.Count);
-        Assert.NotNull(propertyManager[propertyName2]);
-        Assert.Equal(propertyName2, propertyManager[propertyName2]?.Name);
+        Assert.Equal(2, results.Count);
+        Assert.Equal(property.Name, results.First());
+        Assert.Equal(property2, results.Last());
+        
+        serviceProvider.VerifyAll();
+        propertyStore.VerifyAll();
     }
 
     [Fact]
-    public void DetachProperty_ForeignMetadata_ReturnsFalse()
+    public async Task GetPropertyAsync_MissingProperty_ReturnsNotFound()
     {
         // arrange
-        var item = new Mock<IStoreItem>();
-
-        var propertyName1 = XName.Get("MyProperty1");
-        var attachedProperty1 = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName1);
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
-        var propertyName2 = XName.Get("MyProperty2");
-        var propertyMetadata = new PropertyMetadata(propertyName2, false, false, false);
-
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty1 });
+        var propertyManager = new PropertyManager(serviceProvider.Object);
 
         // act
-        var result = propertyManager.DetachProperty(propertyMetadata);
+        var result = await propertyManager.GetPropertyAsync(storeItem, XName.Get("MyProperty"));
 
         // assert
-        Assert.False(result);
-    }
-    
-    [Fact]
-    public void DetachProperty_KnownProperty_ReturnsTrue()
-    {
-        // arrange
-        var item = new Mock<IStoreItem>();
-
-        var propertyName1 = XName.Get("MyProperty1");
-        var attachedProperty1 = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName1);
-        
-        var propertyName2 = XName.Get("MyProperty2");
-        var attachedProperty2 = AttachedProperty.CreateAttached<IStoreItem, string>(propertyName2);
-
-        var propertyManager = new PropertyManager(item.Object, new[] { attachedProperty1, attachedProperty2 });
-
-        var propertyMetadata = propertyManager[propertyName2]!;
-
-        // act
-        var result = propertyManager.DetachProperty(propertyMetadata);
-
-        // assert
-        Assert.True(result);
-        Assert.Single(propertyManager.Properties);
-        Assert.Null(propertyManager[propertyName2]);
-    }
-
-    [Fact]
-    public async Task GetPropertyAsync_UnknownProperty_ReturnsNotFound()
-    {
-        // arrange
-        var item = new Mock<IStoreItem>();
-        
-        var propertyName = XName.Get("MyProperty");
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object);
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
-
-        // act
-        var result = await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
-
-        // assert
-        Assert.False(result.IsSuccess);
         Assert.Equal(DavStatusCode.NotFound, result.StatusCode);
         Assert.Null(result.Value);
         
-        httpContext.VerifyAll();
+        serviceProvider.VerifyAll();
+    }
+    
+    [Theory]
+    [InlineData(null)]
+    [InlineData(9)]
+    public async Task GetPropertyAsync_NoRead_ReturnsMetadataDefaultValue(object? defaultValue)
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(DefaultValue: defaultValue));
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+
+        // act
+        var result = await propertyManager.GetPropertyAsync(storeItem, property.Name);
+
+        // assert
+        Assert.Equal(DavStatusCode.Ok, result.StatusCode);
+        Assert.Equal(defaultValue, result.Value);
+        
+        serviceProvider.VerifyAll();
     }
     
     [Fact]
-    public async Task GetPropertyAsync_NoGetter_ReturnsNull()
+    public async Task GetPropertyAsync_WithRead_ReturnsValue()
     {
         // arrange
-        var item = new Mock<IStoreItem>();
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            read: (context, _) =>
+            {
+                context.SetResult("MyValue");
+                return ValueTask.CompletedTask;
+            });
         
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, getter: null);
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
 
         // act
-        var result = await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
+        var result = await propertyManager.GetPropertyAsync(storeItem, property.Name);
 
         // assert
-        Assert.True(result.IsSuccess);
         Assert.Equal(DavStatusCode.Ok, result.StatusCode);
+        Assert.Equal("MyValue", result.Value);
+        
+        serviceProvider.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task GetPropertyAsync_SecondRead_ReturnsCacheValue()
+    {
+        // arrange
+        var readCalls = 0;
+        
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            read: (context, _) =>
+            {
+                context.SetResult("MyValue");
+                readCalls++;
+                return ValueTask.CompletedTask;
+            });
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+        await propertyManager.GetPropertyAsync(storeItem, property.Name);
+
+        // act
+        var result = await propertyManager.GetPropertyAsync(storeItem, property.Name);
+
+        // assert
+        Assert.Equal(1, readCalls);
+        Assert.Equal(DavStatusCode.Ok, result.StatusCode);
+        Assert.Equal("MyValue", result.Value);
+        
+        serviceProvider.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task GetPropertyAsync_NoReadWithPropertyStore_ReturnsValue()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"));
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+
+        var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PropertyData(property.Name, "MyValue") });
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
+
+        // act
+        var result = await propertyManager.GetPropertyAsync(storeItem, property.Name);
+
+        // assert
+        Assert.Equal(DavStatusCode.Ok, result.StatusCode);
+        Assert.Equal("MyValue", result.Value);
+        
+        serviceProvider.VerifyAll();
+        propertyStore.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task GetPropertyAsync_NoReadWithPropertyStoreMissing_ReturnsNotFound()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"));
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+
+        var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PropertyData>());
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
+
+        // act
+        var result = await propertyManager.GetPropertyAsync(storeItem, property.Name);
+
+        // assert
+        Assert.Equal(DavStatusCode.NotFound, result.StatusCode);
         Assert.Null(result.Value);
         
-        httpContext.VerifyAll();
+        serviceProvider.VerifyAll();
+        propertyStore.VerifyAll();
     }
-    
+
     [Fact]
-    public async Task GetPropertyAsync_WithGetter_ReturnsValue()
+    public async Task SetPropertyAsync_MetadataProtected_ReturnsForbidden()
     {
         // arrange
-        ValueTask<PropertyResult> GetValueAsync<TOwner>(HttpContext context, TOwner item, CancellationToken cancellationToken)
-            where TOwner : IStoreItem
-        {
-            return ValueTask.FromResult(PropertyResult.Success("Value"));
-        }
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(Protected: true));
         
-        var item = new Mock<IStoreItem>();
-
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, getter: GetValueAsync, converter: new StringConverter());
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
 
         // act
-        var result = await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
-
-        // assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(DavStatusCode.Ok, result.StatusCode);
-        Assert.Equal("Value", result.Value);
-        
-        httpContext.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task GetPropertyAsync_WithGetter_ReturnsCacheValue()
-    {
-        // arrange
-        var count = 0;
-        
-        ValueTask<PropertyResult> GetValueAsync<TOwner>(HttpContext context, TOwner item, CancellationToken cancellationToken)
-            where TOwner : IStoreItem
-        {
-            count++;
-            return ValueTask.FromResult(PropertyResult.Success("Value"));
-        }
-        
-        var item = new Mock<IStoreItem>();
-
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, getter: GetValueAsync, converter: new StringConverter());
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
-
-        // act
-        await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
-        await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
-
-        // assert
-        Assert.Equal(1, count);
-        
-        httpContext.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task SetPropertyAsync_UnknownProperty_ReturnsNotFound()
-    {
-        // arrange
-        var item = new Mock<IStoreItem>();
-        
-        var propertyName = XName.Get("MyProperty");
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object);
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
-
-        // act
-        var result = await propertyManager.SetPropertyAsync(httpContext.Object, propertyName, null);
-
-        // assert
-        Assert.Equal(DavStatusCode.NotFound, result);
-        
-        httpContext.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task SetPropertyAsync_NoSetter_ReturnsForbidden()
-    {
-        // arrange
-        var item = new Mock<IStoreItem>();
-        
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, setter: null);
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
-
-        // act
-        var result = await propertyManager.SetPropertyAsync(httpContext.Object, propertyName, null);
+        var result = await propertyManager.SetPropertyAsync(storeItem, property.Name, null);
 
         // assert
         Assert.Equal(DavStatusCode.Forbidden, result);
         
-        httpContext.VerifyAll();
+        serviceProvider.VerifyAll();
     }
     
     [Fact]
-    public async Task SetPropertyAsync_WithSetter_ReturnsOk()
+    public async Task SetPropertyAsync_MetadataComputed_ReturnsForbidden()
     {
         // arrange
-        ValueTask<DavStatusCode> SetValueAsync<TOwner>(HttpContext context, TOwner item, object? value, CancellationToken cancellationToken)
-            where TOwner : IStoreItem
-        {
-            return ValueTask.FromResult(DavStatusCode.Ok);
-        }
-
-        var item = new Mock<IStoreItem>();
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            metadata: new PropertyMetadata(Computed: true));
         
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, setter: SetValueAsync, converter: new StringConverter());
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
 
         // act
-        var result = await propertyManager.SetPropertyAsync(httpContext.Object, propertyName, null);
+        var result = await propertyManager.SetPropertyAsync(storeItem, property.Name, null);
+
+        // assert
+        Assert.Equal(DavStatusCode.Forbidden, result);
+        
+        serviceProvider.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task SetPropertyAsync_MissingProperty_ReturnsNotFound()
+    {
+        // arrange
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+
+        // act
+        var result = await propertyManager.SetPropertyAsync(storeItem, XName.Get("MyProperty"), null);
+
+        // assert
+        Assert.Equal(DavStatusCode.NotFound, result);
+        
+        serviceProvider.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task SetPropertyAsync_NoChange_ReturnsForbidden()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"));
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+
+        // act
+        var result = await propertyManager.SetPropertyAsync(storeItem, property.Name, null);
+
+        // assert
+        Assert.Equal(DavStatusCode.Forbidden, result);
+        
+        serviceProvider.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task SetPropertyAsync_WithChange_ReturnsOk()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"),
+            change: (_, _) => ValueTask.CompletedTask);
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object);
+
+        // act
+        var result = await propertyManager.SetPropertyAsync(storeItem, property.Name, null);
 
         // assert
         Assert.Equal(DavStatusCode.Ok, result);
         
-        httpContext.VerifyAll();
+        serviceProvider.VerifyAll();
     }
     
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task SetPropertyAsync_SuccessfulSet_UpdatesCache(bool successfulSet)
+    [Fact]
+    public async Task SetPropertyAsync_WithPropertyStoreMissingProperty_ReturnsNotFound()
     {
         // arrange
-        ValueTask<DavStatusCode> SetValueAsync<TOwner>(HttpContext context, TOwner item, object? value, CancellationToken cancellationToken)
-            where TOwner : IStoreItem
-        {
-            return successfulSet ? ValueTask.FromResult(DavStatusCode.Ok) : ValueTask.FromResult(DavStatusCode.Forbidden);
-        }
-        
-        var count = 0;
-        
-        ValueTask<PropertyResult> GetValueAsync<TOwner>(HttpContext context, TOwner item, CancellationToken cancellationToken)
-            where TOwner : IStoreItem
-        {
-            count++;
-            return ValueTask.FromResult(PropertyResult.Success("Value"));
-        }
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
-        var item = new Mock<IStoreItem>();
+        var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PropertyData>());
         
-        var propertyName = XName.Get("MyProperty");
-        var attachedProperty = AttachedProperty
-            .CreateAttached<IStoreItem, string>(propertyName, setter: SetValueAsync, getter: GetValueAsync, converter: new StringConverter());
-
-        IPropertyManager propertyManager = new PropertyManager(item.Object, new[] { attachedProperty });
-
-        var httpContext = new Mock<HttpContext>(MockBehavior.Strict);
+        var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
 
         // act
-        var result = await propertyManager.SetPropertyAsync(httpContext.Object, propertyName, null);
-        await propertyManager.GetPropertyAsync(httpContext.Object, propertyName);
+        var result = await propertyManager.SetPropertyAsync(storeItem, XName.Get("MyProperty"), null);
 
         // assert
-        Assert.Equal(successfulSet ? DavStatusCode.Ok : DavStatusCode.Forbidden, result);
-        Assert.Equal(successfulSet ? 0 : 1, count);
+        Assert.Equal(DavStatusCode.NotFound, result);
         
-        httpContext.VerifyAll();
+        serviceProvider.VerifyAll();
+        propertyStore.VerifyAll();
+    }
+    
+    [Fact]
+    public async Task SetPropertyAsync_WithPropertyStore_ReturnsOk()
+    {
+        // arrange
+        var property = Property.RegisterProperty<TestStoreItem>(
+            XName.Get("MyProperty"));
+        
+        var storeItem = new TestStoreItem(new Uri("/"));
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+
+        var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
+        propertyStore.Setup(s => s.GetPropertiesAsync(storeItem, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PropertyData(property.Name, null) });
+
+        propertyStore.Setup(s => s.SetPropertyAsync(
+            storeItem,
+            property.Name,
+            It.IsAny<PropertyMetadata>(),
+            null,
+            It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
+        
+        var propertyManager = new PropertyManager(serviceProvider.Object, propertyStore.Object);
+
+        // act
+        var result = await propertyManager.SetPropertyAsync(storeItem, property.Name, null);
+
+        // assert
+        Assert.Equal(DavStatusCode.Ok, result);
+        
+        serviceProvider.VerifyAll();
+        propertyStore.VerifyAll();
     }
 }
