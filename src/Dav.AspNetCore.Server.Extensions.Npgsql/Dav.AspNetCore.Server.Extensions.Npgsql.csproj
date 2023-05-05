@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>Dav.AspNetCore.Server.Extensions.Npgsql</PackageId>
+        <PackageVersion>1.0.0</PackageVersion>
+        <Authors>Kevin Scholz</Authors>
+        <Company>Kevin Scholz</Company>
+        <PackageTags>WebDav;AspNetCore;Asp;Dav;AspNetCore WebDav;AspNetCore Dav;Asp WebDav;Asp Dav;Postgres;Npgsql;SQL;ADO</PackageTags>
+        <PackageProjectUrl>https://github.com/ThuCommix/Dav.AspNetCore.Server</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/ThuCommix/Dav.AspNetCore.Server</RepositoryUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Description>This library provides postgres implementations for lock manager and property store.</Description>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Dav.AspNetCore.Server" Version="1.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+        <PackageReference Include="Npgsql" Version="7.0.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
+
+</Project>
