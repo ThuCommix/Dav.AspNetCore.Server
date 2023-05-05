@@ -11,22 +11,9 @@ internal class DeleteHandler : RequestHandler
     /// <returns></returns>
     protected override async Task HandleRequestAsync(CancellationToken cancellationToken = default)
     {
-        var requestUri = Context.Request.Path.ToUri();
-        
         if (Item == null)
         {
             Context.SetResult(DavStatusCode.NoContent);
-            return;
-        }
-        
-        var activeLocks = await Collection.LockManager.GetLocksAsync(
-            requestUri,
-            cancellationToken);
-        
-        var webDavHeaders = Context.Request.GetTypedWebDavHeaders();
-        if (activeLocks.Count > 0 && webDavHeaders.If.Count == 0)
-        {
-            await Context.SendLockedAsync(requestUri, cancellationToken);
             return;
         }
 
