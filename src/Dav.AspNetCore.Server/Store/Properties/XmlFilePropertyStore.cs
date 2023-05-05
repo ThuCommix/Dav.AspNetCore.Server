@@ -28,7 +28,7 @@ public class XmlFilePropertyStore : IPropertyStore
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns></returns>
-    public async ValueTask CommitChangesAsync(CancellationToken cancellationToken = default)
+    public async ValueTask SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         foreach (var entry in propertyCache)
         {
@@ -52,6 +52,57 @@ public class XmlFilePropertyStore : IPropertyStore
             await using var fileStream = File.OpenWrite(xmlFilePath);
             await document.SaveAsync(fileStream, SaveOptions.None, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Deletes all properties of the specified item async.
+    /// </summary>
+    /// <param name="item">The store item.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns></returns>
+    public ValueTask DeletePropertiesAsync(
+        IStoreItem item, 
+        CancellationToken cancellationToken = default)
+    {
+        var xmlFilePath = Path.Combine(options.RootPath, item.Uri.LocalPath.TrimStart('/') + ".xml");
+        if (File.Exists(xmlFilePath))
+            File.Delete(xmlFilePath);
+
+        propertyCache.Remove(item);
+        
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Copies all properties of the specified item to the destination async.
+    /// </summary>
+    /// <param name="source">The source store item.</param>
+    /// <param name="destination">The destination store item.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns></returns>
+    public ValueTask CopyPropertiesAsync(
+        IStoreItem source, 
+        IStoreItem destination, 
+        CancellationToken cancellationToken = default)
+    {
+        var sourceXmlFilePath = Path.Combine(options.RootPath, source.Uri.LocalPath.TrimStart('/') + ".xml");
+        var destinationXmlFilePath = Path.Combine(options.RootPath, destination.Uri.LocalPath.TrimStart('/') + ".xml");
+        
+        if (File.Exists(sourceXmlFilePath))
+        {
+            var fileInfo = new FileInfo(destinationXmlFilePath);
+            if (fileInfo.Directory?.Exists == false)
+                fileInfo.Directory.Create();
+
+            File.Copy(sourceXmlFilePath, destinationXmlFilePath, true);
+        }
+
+        if (propertyCache.TryGetValue(source, out var propertyMap))
+        {
+            propertyCache[destination] = propertyMap.ToDictionary(x => x.Key, x => x.Value);
+        }
+
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>

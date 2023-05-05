@@ -1029,7 +1029,7 @@ public class RequestHandlerTest
         if (withPropertyStore)
         {
             propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
-            propertyStore.Setup(s => s.CommitChangesAsync(It.IsAny<CancellationToken>()))
+            propertyStore.Setup(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.CompletedTask);
                 
             requestServices.AddSingleton(propertyStore.Object);

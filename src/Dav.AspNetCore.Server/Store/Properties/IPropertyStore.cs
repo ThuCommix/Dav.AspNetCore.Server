@@ -9,7 +9,24 @@ public interface IPropertyStore
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns></returns>
-    ValueTask CommitChangesAsync(CancellationToken cancellationToken = default);
+    ValueTask SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all properties of the specified item async.
+    /// </summary>
+    /// <param name="item">The store item.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns></returns>
+    ValueTask DeletePropertiesAsync(IStoreItem item, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Copies all properties of the specified item to the destination async.
+    /// </summary>
+    /// <param name="source">The source store item.</param>
+    /// <param name="destination">The destination store item.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns></returns>
+    ValueTask CopyPropertiesAsync(IStoreItem source, IStoreItem destination, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets a property of the specified item async.

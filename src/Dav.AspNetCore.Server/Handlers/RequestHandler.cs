@@ -12,6 +12,7 @@ namespace Dav.AspNetCore.Server.Handlers;
 internal abstract class RequestHandler : IRequestHandler
 {
     private readonly Dictionary<Uri, IReadOnlyCollection<ResourceLock>> lockCache = new();
+    private IPropertyStore? propertyStore;
 
     private static readonly List<string> SkipLockValidation = new()
     {
@@ -93,6 +94,8 @@ internal abstract class RequestHandler : IRequestHandler
         LockManager = Context.RequestServices.GetRequiredService<ILockManager>();
         WebDavHeaders = context.Request.GetTypedWebDavHeaders();
 
+        propertyStore = Context.RequestServices.GetService<IPropertyStore>();
+
         if (requestUri == parentUri)
         {
             Item = collection;
@@ -123,9 +126,8 @@ internal abstract class RequestHandler : IRequestHandler
 
         await HandleRequestAsync(cancellationToken);
         
-        var propertyStore = Context.RequestServices.GetService<IPropertyStore>();
         if (propertyStore != null)
-            await propertyStore.CommitChangesAsync(cancellationToken);
+            await propertyStore.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -221,6 +223,9 @@ internal abstract class RequestHandler : IRequestHandler
             errors.Add(new WebDavError(item.Uri, status, null));
             return false;
         }
+
+        if (propertyStore != null)
+            await propertyStore.DeletePropertiesAsync(item, cancellationToken);
 
         return true;
     }

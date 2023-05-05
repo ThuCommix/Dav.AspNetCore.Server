@@ -1,10 +1,14 @@
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Store;
+using Dav.AspNetCore.Server.Store.Properties;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Dav.AspNetCore.Server.Handlers;
 
 internal class MoveHandler : RequestHandler
 {
+    private IPropertyStore? propertyStore;
+    
     /// <summary>
     /// Handles the web dav request async.
     /// </summary>
@@ -47,6 +51,8 @@ internal class MoveHandler : RequestHandler
             Context.SetResult(DavStatusCode.PreconditionFailed);
             return;
         }
+
+        propertyStore = Context.RequestServices.GetService<IPropertyStore>();
 
         var errors = new List<WebDavError>();
         var result = await MoveItemRecursiveAsync(
@@ -125,6 +131,9 @@ internal class MoveHandler : RequestHandler
             return false;
         }
 
+        if (propertyStore != null)
+            await propertyStore.CopyPropertiesAsync(item, result.Item, cancellationToken);
+
         if (item is IStoreCollection collectionToMove)
         {
             var subItemError = false;
@@ -152,6 +161,9 @@ internal class MoveHandler : RequestHandler
             errors.Add(new WebDavError(UriHelper.Combine(collection.Uri, itemName), status, null));
             return false;
         }
+
+        if (propertyStore != null)
+            await propertyStore.DeletePropertiesAsync(item, cancellationToken);
 
         return true;
     }
