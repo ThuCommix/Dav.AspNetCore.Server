@@ -73,8 +73,8 @@ public class NpgsqlLockManager : ILockManager, IDisposable
             command.Parameters.Add(new NpgsqlParameter("@LockType", (int)newLock.LockType));
             command.Parameters.Add(new NpgsqlParameter("@Owner", newLock.Owner.ToString(SaveOptions.DisableFormatting)));
             command.Parameters.Add(new NpgsqlParameter("@Recursive", newLock.Recursive));
-            command.Parameters.Add(new NpgsqlParameter("@Timeout", (int)newLock.Timeout.TotalSeconds));
-            command.Parameters.Add(new NpgsqlParameter("@Issued", (int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+            command.Parameters.Add(new NpgsqlParameter("@Timeout", (long)newLock.Timeout.TotalSeconds));
+            command.Parameters.Add(new NpgsqlParameter("@Issued", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
             command.Parameters.Add(new NpgsqlParameter("@Depth", depth));
             
             var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -109,7 +109,7 @@ public class NpgsqlLockManager : ILockManager, IDisposable
         command.CommandText = "SELECT TOP 1 Id FROM dav_aspnetcore_server_resource_lock WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
         command.Parameters.Add(new NpgsqlParameter("@Id", token.AbsoluteUri));
         command.Parameters.Add(new NpgsqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
@@ -118,8 +118,8 @@ public class NpgsqlLockManager : ILockManager, IDisposable
             await using var updateCommand = connection.CreateCommand();
             updateCommand.CommandText = "UPDATE dav_aspnetcore_server_resource_lock SET Timeout = @Timeout, Issued = @TotalSeconds WHERE Id = @Id";
             updateCommand.Parameters.Add(new NpgsqlParameter("@Id", id));
-            updateCommand.Parameters.Add(new NpgsqlParameter("@Timeout", (int)timeout.TotalSeconds));
-            updateCommand.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+            updateCommand.Parameters.Add(new NpgsqlParameter("@Timeout", (long)timeout.TotalSeconds));
+            updateCommand.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
 
             var affectedRows = await updateCommand.ExecuteNonQueryAsync(cancellationToken);
             if (affectedRows > 0)
@@ -151,7 +151,7 @@ public class NpgsqlLockManager : ILockManager, IDisposable
         command.CommandText = "SELECT TOP 1 Id FROM dav_aspnetcore_server_resource_lock WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
         command.Parameters.Add(new NpgsqlParameter("@Id", token.AbsoluteUri));
         command.Parameters.Add(new NpgsqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
@@ -193,7 +193,7 @@ public class NpgsqlLockManager : ILockManager, IDisposable
         command.CommandText = "SELECT * FROM dav_aspnetcore_server_resource_lock WHERE ((Depth <= @Depth AND Recursive = true) OR Uri = @Uri) AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
         command.Parameters.Add(new NpgsqlParameter("@Depth", depth));
         command.Parameters.Add(new NpgsqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

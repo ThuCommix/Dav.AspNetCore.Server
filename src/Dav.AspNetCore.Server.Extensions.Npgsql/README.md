@@ -38,8 +38,8 @@ CREATE TABLE dav_aspnetcore_server_resource_lock
   	LockType INTEGER NOT NULL,
   	Owner text NOT NULL,
   	Recursive boolean NOT NULL,
-  	Timeout INTEGER NOT NULL,
-  	Issued INTEGER NOT NULL,
+  	Timeout bigint NOT NULL,
+  	Issued bigint NOT NULL,
   	Depth INTEGER NOT NULL
 );
 ```
