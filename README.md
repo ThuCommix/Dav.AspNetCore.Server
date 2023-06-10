@@ -48,5 +48,55 @@ app.Map("/dav", davApp =>
 app.Run();
 ```
 
+## Add locking support
+
+There are different types of locking implementations available. 
+If you need something simple you can start out with the in memory lock implementation:
+
+```csharp
+builder.Services.AddWebDav(davBuilder =>
+{
+    [...]
+    davBuilder.AddInMemoryLocks();
+});
+```
+
+In case you need something more distributed you can check out the other sql based implementations:
+- [Sqlite](src/Dav.AspNetCore.Server.Extensions.Sqlite/README.md)
+- [SqlServer](src/Dav.AspNetCore.Server.Extensions.SqlServer/README.md)
+- [PostgreSQL](src/Dav.AspNetCore.Server.Extensions.Npgsql/README.md)
+
+## Accepting properties
+
+Storing (custom) properties is a crucial part of DAV. To start accepting properties you need to configure
+a property store. Like previously mentioned in the locking section there are different implementations available:
+
+```csharp
+builder.Services.AddWebDav(davBuilder =>
+{
+    [...]
+    
+    // there will be a xml file containing properties for each resource made available
+    // it's important to not expose this folder
+    
+    davBuilder.AddXmlFilePropertyStore(options =>
+    {
+        options.AcceptCustomProperties = true;
+        options.RootPath = "/tmp_meta/";
+    });
+});
+```
+
+You may ask: what exactly is a "custom" property; A custom property is a property not made available by the
+dav resource itself, it can be arbitrary data. Since this example uses the local file store, all properties
+are computed and thus can't be changed which only leaves us with adding additional properties. On different
+dav resources with normal properties (not protected and not calculated) you can change them without having
+`AcceptCustomProperties = true`.
+
+Different sql based implementations are available here:
+- [Sqlite](src/Dav.AspNetCore.Server.Extensions.Sqlite/README.md)
+- [SqlServer](src/Dav.AspNetCore.Server.Extensions.SqlServer/README.md)
+- [PostgreSQL](src/Dav.AspNetCore.Server.Extensions.Npgsql/README.md)
+
 ## Contributing
 Feel free to open issues or submit pullrequests.
