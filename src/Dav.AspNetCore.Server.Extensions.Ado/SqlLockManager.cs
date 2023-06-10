@@ -236,13 +236,16 @@ public abstract class SqlLockManager : ILockManager, IDisposable
     /// <summary>
     /// Removes stale locks async.
     /// </summary>
-    public async Task RemoveStaleLocksAsync()
+    public async Task RemoveStaleLocksAsync(CancellationToken cancellationToken = default)
     {
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
+        
         await using var command = GetDeleteStaleCommand(
             connection.Value,
             (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
         
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>
@@ -345,7 +348,7 @@ public abstract class SqlLockManager : ILockManager, IDisposable
     protected string GetTableId()
     {
         return string.IsNullOrWhiteSpace(options.Schema) 
-            ? $"[{options.Table}]" 
-            : $"[{options.Schema}].[{options.Table}]";
+            ? $"{options.Table}" 
+            : $"{options.Schema}.{options.Table}";
     }
 }

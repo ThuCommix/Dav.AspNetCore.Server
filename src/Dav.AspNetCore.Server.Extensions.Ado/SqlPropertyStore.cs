@@ -291,7 +291,7 @@ public abstract class SqlPropertyStore : IPropertyStore, IDisposable
     protected string GetTableId()
     {
         return string.IsNullOrWhiteSpace(options.Schema) 
-            ? $"[{options.Table}]" 
-            : $"[{options.Schema}].[{options.Table}]";
+            ? $"{options.Table}" 
+            : $"{options.Schema}.{options.Table}";
     }
 }

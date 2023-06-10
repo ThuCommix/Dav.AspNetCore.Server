@@ -40,7 +40,7 @@ internal class StaleLocksRemovalJob : BackgroundService
 
                 if (lockManager is SqlLockManager sqlLockManager)
                 {
-                    await sqlLockManager.RemoveStaleLocksAsync();
+                    await sqlLockManager.RemoveStaleLocksAsync(stoppingToken);
                 }
 
             }
