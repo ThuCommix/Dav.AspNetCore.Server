@@ -2,7 +2,7 @@
 using Dav.AspNetCore.Server.Store;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Dav.AspNetCore.Server.Extensions.Mssql;
+namespace Dav.AspNetCore.Server.Extensions.SqlServer;
 
 public static class WabDavOptionsBuilderExtensions
 {
@@ -14,16 +14,17 @@ public static class WabDavOptionsBuilderExtensions
     /// <returns>The web dav options builder.</returns>
     public static WebDavOptionsBuilder AddSqlLocks(
         this WebDavOptionsBuilder builder,
-        Action<SqlOptions> configureOptions)
+        Action<SqlLockOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
 
-        var options = new SqlOptions();
+        var options = new SqlLockOptions();
         configureOptions(options);
         
         builder.Services.TryAddSingleton(options);
+        builder.AddStaleLocksRemovalJob();
 
-        return builder.AddLocks<SqlLockManager>();
+        return builder.AddLocks<SqlServerLockManager>();
     }
 
     /// <summary>
@@ -37,6 +38,6 @@ public static class WabDavOptionsBuilderExtensions
         Action<SqlPropertyStoreOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
-        return builder.AddPropertyStore<SqlPropertyStoreOptions, SqlPropertyStore>(configureOptions);
+        return builder.AddPropertyStore<SqlPropertyStoreOptions, SqlServerPropertyStore>(configureOptions);
     }
 }

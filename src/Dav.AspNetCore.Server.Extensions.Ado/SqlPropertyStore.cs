@@ -1,18 +1,18 @@
 using System.Data;
+using System.Data.Common;
 using System.Xml;
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Store;
 using Dav.AspNetCore.Server.Store.Properties;
-using Microsoft.Data.SqlClient;
 
-namespace Dav.AspNetCore.Server.Extensions.Mssql;
+namespace Dav.AspNetCore.Server.Extensions;
 
-public class SqlPropertyStore : IPropertyStore, IDisposable
+public abstract class SqlPropertyStore : IPropertyStore, IDisposable
 {
     private static readonly XName Property = XName.Get("Property", "https://github.com/ThuCommix/Dav.AspNetCore.Server");
     
     private readonly SqlPropertyStoreOptions options;
-    private readonly SqlConnection connection;
+    private readonly Lazy<DbConnection> connection;
     private readonly Dictionary<IStoreItem, Dictionary<XName, PropertyData>> propertyCache = new();
     private readonly Dictionary<IStoreItem, bool> writeLookup = new();
 
@@ -20,12 +20,12 @@ public class SqlPropertyStore : IPropertyStore, IDisposable
     /// Initializes a new <see cref="SqlPropertyStore"/> class.
     /// </summary>
     /// <param name="options">The mssql property store options.</param>
-    public SqlPropertyStore(SqlPropertyStoreOptions options)
+    protected SqlPropertyStore(SqlPropertyStoreOptions options)
     {
         ArgumentNullException.ThrowIfNull(options, nameof(options));
         
-        connection = new SqlConnection(options.ConnectionString);
         this.options = options;
+        connection = new Lazy<DbConnection>(() => CreateConnection(options.ConnectionString));
     }
     
     /// <summary>
@@ -35,40 +35,40 @@ public class SqlPropertyStore : IPropertyStore, IDisposable
     /// <returns></returns>
     public async ValueTask SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
         
         foreach (var entry in propertyCache)
         {
             if (!writeLookup.ContainsKey(entry.Key))
                 continue;
 
-            await using var deleteCommand = connection.CreateCommand();
-            deleteCommand.CommandText = "DELETE FROM dav_aspnetcore_server_property WHERE Uri = @Uri";
-            deleteCommand.Parameters.Add(new SqlParameter("@Uri", entry.Key.Uri.LocalPath));
-
+            await using var deleteCommand = GetDeleteCommand(connection.Value, entry.Key.Uri.LocalPath);
             await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
 
             foreach (var propertyData in entry.Value)
             {
                 if (propertyData.Value.CurrentValue == null)
                     continue;
-                
-                await using var insertCommand = connection.CreateCommand();
-                insertCommand.CommandText = "INSERT INTO dav_aspnetcore_server_property VALUES (@Uri, @ElementName, @ElementNamespace, @ElementValue)";
-                insertCommand.Parameters.Add(new SqlParameter("@Uri", entry.Key.Uri.LocalPath));
-                insertCommand.Parameters.Add(new SqlParameter("@ElementName", propertyData.Key.LocalName));
-                insertCommand.Parameters.Add(new SqlParameter("@ElementNamespace", propertyData.Key.NamespaceName));
 
+                string propertyValue;
                 if (propertyData.Value.CurrentValue is XElement[] elements)
                 {
-                    insertCommand.Parameters.Add(new SqlParameter("@ElementValue",
-                        new XElement(Property, Array.ConvertAll(elements, input => (object)input)).ToString()));
+                    propertyValue = new XElement(
+                        Property, 
+                        Array.ConvertAll(elements, input => (object)input)).ToString();
                 }
                 else
                 {
-                    insertCommand.Parameters.Add(new SqlParameter("@ElementValue", propertyData.Value.CurrentValue.ToString()));    
+                    propertyValue = propertyData.Value.CurrentValue.ToString()!;    
                 }
+
+                await using var insertCommand = GetInsertCommand(
+                    connection.Value,
+                    entry.Key.Uri.LocalPath,
+                    propertyData.Key.LocalName,
+                    propertyData.Key.NamespaceName,
+                    propertyValue);
 
                 await insertCommand.ExecuteNonQueryAsync(cancellationToken);
             }
@@ -85,12 +85,12 @@ public class SqlPropertyStore : IPropertyStore, IDisposable
     {
         ArgumentNullException.ThrowIfNull(item, nameof(item));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
-        
-        await using var deleteCommand = connection.CreateCommand();
-        deleteCommand.CommandText = "DELETE FROM dav_aspnetcore_server_property WHERE Uri = @Uri";
-        deleteCommand.Parameters.Add(new SqlParameter("@Uri", item.Uri.LocalPath));
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
+
+        await using var deleteCommand = GetDeleteCommand(
+            connection.Value,
+            item.Uri.LocalPath);
 
         await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
         
@@ -112,21 +112,14 @@ public class SqlPropertyStore : IPropertyStore, IDisposable
         ArgumentNullException.ThrowIfNull(source, nameof(source));
         ArgumentNullException.ThrowIfNull(destination, nameof(destination));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
-        
-        await using var copyCommand = connection.CreateCommand();
-        copyCommand.CommandText = @"INSERT INTO dav_aspnetcore_server_property
-SELECT
-@DestinationUri,
-ElementName,
-ElementNamespace,
-ElementValue
-FROM dav_aspnetcore_server_property WHERE Uri = @SourceUri";
-        
-        copyCommand.Parameters.Add(new SqlParameter("@SourceUri", source.Uri.LocalPath));
-        copyCommand.Parameters.Add(new SqlParameter("@DestinationUri", destination.Uri.LocalPath));
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
 
+        await using var copyCommand = GetCopyCommand(
+            connection.Value,
+            source.Uri.LocalPath,
+            destination.Uri.LocalPath);
+        
         await copyCommand.ExecuteNonQueryAsync(cancellationToken);
         
         if (propertyCache.TryGetValue(source, out var propertyMap))
@@ -188,12 +181,10 @@ FROM dav_aspnetcore_server_property WHERE Uri = @SourceUri";
         if (propertyCache.TryGetValue(item, out var propertyMap))
             return propertyMap.Values;
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM dav_aspnetcore_server_property WHERE Uri = @Uri";
-        command.Parameters.Add(new SqlParameter("@Uri", item.Uri.LocalPath));
+        await using var command = GetSelectCommand(connection.Value, item.Uri.LocalPath);
 
         var propertyDataList = new List<PropertyData>();
         
@@ -229,12 +220,78 @@ FROM dav_aspnetcore_server_property WHERE Uri = @SourceUri";
 
         return propertyDataList;
     }
-
+    
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
     /// </summary>
     public void Dispose()
     {
-        connection.Dispose();
+        connection.Value.Dispose();
+    }
+
+    /// <summary>
+    /// Creates a db connection.
+    /// </summary>
+    /// <param name="connectionString">The connection string.</param>
+    /// <returns>The db connection.</returns>
+    protected abstract DbConnection CreateConnection(string connectionString);
+
+    /// <summary>
+    /// Gets the insert command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="uri">The uri.</param>
+    /// <param name="elementName">The element name.</param>
+    /// <param name="elementNamespace">The element namespace.</param>
+    /// <param name="elementValue">The element value.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetInsertCommand(
+        DbConnection connection,
+        string uri,
+        string elementName,
+        string elementNamespace,
+        string elementValue);
+    
+    /// <summary>
+    /// Gets the delete command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="uri">The uri.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetDeleteCommand(
+        DbConnection connection,
+        string uri);
+    
+    /// <summary>
+    /// Gets the select command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="uri">The uri.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetSelectCommand(
+        DbConnection connection,
+        string uri);
+
+    /// <summary>
+    /// Gets the copy command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="sourceUri">The source uri.</param>
+    /// <param name="destinationUri">The destination uri.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetCopyCommand(
+        DbConnection connection,
+        string sourceUri,
+        string destinationUri);
+    
+    /// <summary>
+    /// Gets the table id.
+    /// </summary>
+    /// <returns></returns>
+    protected string GetTableId()
+    {
+        return string.IsNullOrWhiteSpace(options.Schema) 
+            ? $"[{options.Table}]" 
+            : $"[{options.Schema}].[{options.Table}]";
     }
 }

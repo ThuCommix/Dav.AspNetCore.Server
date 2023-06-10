@@ -19,7 +19,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Exten
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Extensions.Npgsql", "Dav.AspNetCore.Server.Extensions.Npgsql\Dav.AspNetCore.Server.Extensions.Npgsql.csproj", "{E3B75DA5-F6FE-4AB0-B4B0-F76A934872EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Extensions.Mssql", "Dav.AspNetCore.Server.Extensions.Mssql\Dav.AspNetCore.Server.Extensions.Mssql.csproj", "{044B37F1-4851-4489-B14D-F5014F344A52}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Extensions.SqlServer", "Dav.AspNetCore.Server.Extensions.SqlServer\Dav.AspNetCore.Server.Extensions.SqlServer.csproj", "{044B37F1-4851-4489-B14D-F5014F344A52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dav.AspNetCore.Server.Extensions.Ado", "Dav.AspNetCore.Server.Extensions.Ado\Dav.AspNetCore.Server.Extensions.Ado.csproj", "{7F5B002E-DB89-4D4C-9DCC-2B3BE2287BAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,10 @@ Global
 		{044B37F1-4851-4489-B14D-F5014F344A52}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{044B37F1-4851-4489-B14D-F5014F344A52}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{044B37F1-4851-4489-B14D-F5014F344A52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F5B002E-DB89-4D4C-9DCC-2B3BE2287BAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F5B002E-DB89-4D4C-9DCC-2B3BE2287BAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F5B002E-DB89-4D4C-9DCC-2B3BE2287BAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F5B002E-DB89-4D4C-9DCC-2B3BE2287BAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection

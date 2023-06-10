@@ -1,17 +1,17 @@
 using System.Data.Common;
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Locks;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 
-namespace Dav.AspNetCore.Server.Extensions.Sqlite;
+namespace Dav.AspNetCore.Server.Extensions.SqlServer;
 
-public class SqliteLockManager : SqlLockManager
+public class SqlServerLockManager : SqlLockManager
 {
     /// <summary>
-    /// Initializes a new <see cref="SqliteLockManager"/> class.
+    /// Initializes a new <see cref="SqlServerLockManager"/> class.
     /// </summary>
-    /// <param name="options">The sql lock options.</param>
-    public SqliteLockManager(SqlLockOptions options)
+    /// <param name="options">The sql lock store options.</param>
+    public SqlServerLockManager(SqlLockOptions options) 
         : base(options)
     {
     }
@@ -22,7 +22,7 @@ public class SqliteLockManager : SqlLockManager
     /// <param name="connectionString">The connection string.</param>
     /// <returns>The db connection.</returns>
     protected override DbConnection CreateConnection(string connectionString) 
-        => new SqliteConnection(connectionString);
+        => new SqlConnection(connectionString);
 
     /// <summary>
     /// Gets the insert command.
@@ -45,19 +45,19 @@ public class SqliteLockManager : SqlLockManager
         XElement owner, 
         bool recursive, 
         long timeout,
-        long totalSeconds,
+        long totalSeconds, 
         int depth)
     {
         var command = connection.CreateCommand();
         command.CommandText = $"INSERT INTO {GetTableId()} VALUES (@Id, @Uri, @LockType, @Owner, @Recursive, @Timeout, @Issued, @Depth)";
-        command.Parameters.Add(new SqliteParameter("@Id", id));
-        command.Parameters.Add(new SqliteParameter("@Uri", uri));
-        command.Parameters.Add(new SqliteParameter("@LockType", (int)lockType));
-        command.Parameters.Add(new SqliteParameter("@Owner", owner.ToString(SaveOptions.DisableFormatting)));
-        command.Parameters.Add(new SqliteParameter("@Recursive", recursive ? 1 : 0));
-        command.Parameters.Add(new SqliteParameter("@Timeout", timeout));
-        command.Parameters.Add(new SqliteParameter("@Issued", totalSeconds));
-        command.Parameters.Add(new SqliteParameter("@Depth", depth));
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Uri", uri));
+        command.Parameters.Add(new SqlParameter("@LockType", (int)lockType));
+        command.Parameters.Add(new SqlParameter("@Owner", owner.ToString(SaveOptions.DisableFormatting)));
+        command.Parameters.Add(new SqlParameter("@Recursive", recursive));
+        command.Parameters.Add(new SqlParameter("@Timeout", timeout));
+        command.Parameters.Add(new SqlParameter("@Issued", totalSeconds));
+        command.Parameters.Add(new SqlParameter("@Depth", depth));
 
         return command;
     }
@@ -78,9 +78,9 @@ public class SqliteLockManager : SqlLockManager
     {
         var command = connection.CreateCommand();
         command.CommandText = $"SELECT * FROM {GetTableId()} WHERE ((Depth <= @Depth AND Recursive = 1) OR Uri = @Uri) AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
-        command.Parameters.Add(new SqliteParameter("@Depth", depth));
-        command.Parameters.Add(new SqliteParameter("@Uri", uri));
-        command.Parameters.Add(new SqliteParameter("@TotalSeconds", totalSeconds));
+        command.Parameters.Add(new SqlParameter("@Depth", depth));
+        command.Parameters.Add(new SqlParameter("@Uri", uri));
+        command.Parameters.Add(new SqlParameter("@TotalSeconds", totalSeconds));
 
         return command;
     }
@@ -100,10 +100,10 @@ public class SqliteLockManager : SqlLockManager
         long totalSeconds)
     {
         var command = connection.CreateCommand();
-        command.CommandText = $"SELECT Id FROM {GetTableId()} WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0) LIMIT 1";
-        command.Parameters.Add(new SqliteParameter("@Id", id));
-        command.Parameters.Add(new SqliteParameter("@Uri", uri));
-        command.Parameters.Add(new SqliteParameter("@TotalSeconds", totalSeconds));
+        command.CommandText = $"SELECT TOP 1 Id FROM {GetTableId()} WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Uri", uri));
+        command.Parameters.Add(new SqlParameter("@TotalSeconds", totalSeconds));
 
         return command;
     }
@@ -124,9 +124,9 @@ public class SqliteLockManager : SqlLockManager
     {
         var updateCommand = connection.CreateCommand();
         updateCommand.CommandText = $"UPDATE {GetTableId()} SET Timeout = @Timeout, Issued = @TotalSeconds WHERE Id = @Id";
-        updateCommand.Parameters.Add(new SqliteParameter("@Id", id));
-        updateCommand.Parameters.Add(new SqliteParameter("@Timeout", timeout));
-        updateCommand.Parameters.Add(new SqliteParameter("@TotalSeconds", totalSeconds));
+        updateCommand.Parameters.Add(new SqlParameter("@Id", id));
+        updateCommand.Parameters.Add(new SqlParameter("@Timeout", timeout));
+        updateCommand.Parameters.Add(new SqlParameter("@TotalSeconds", totalSeconds));
 
         return updateCommand;
     }
@@ -141,7 +141,7 @@ public class SqliteLockManager : SqlLockManager
     {
         var deleteCommand = connection.CreateCommand();
         deleteCommand.CommandText = $"DELETE FROM {GetTableId()} WHERE Id = @Id";
-        deleteCommand.Parameters.Add(new SqliteParameter("@Id", id));
+        deleteCommand.Parameters.Add(new SqlParameter("@Id", id));
 
         return deleteCommand;
     }
@@ -156,7 +156,7 @@ public class SqliteLockManager : SqlLockManager
     {
         var command = connection.CreateCommand();
         command.CommandText = $"DELETE FROM {GetTableId()} WHERE (Issued + Timeout < @TotalSeconds AND Timeout <> 0)";
-        command.Parameters.Add(new SqliteParameter("@TotalSeconds", totalSeconds));
+        command.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
 
         return command;
     }

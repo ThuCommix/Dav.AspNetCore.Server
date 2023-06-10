@@ -14,14 +14,15 @@ public static class WabDavOptionsBuilderExtensions
     /// <returns>The web dav options builder.</returns>
     public static WebDavOptionsBuilder AddNpgsqlLocks(
         this WebDavOptionsBuilder builder,
-        Action<NpgsqlOptions> configureOptions)
+        Action<SqlLockOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
 
-        var options = new NpgsqlOptions();
+        var options = new SqlLockOptions();
         configureOptions(options);
         
         builder.Services.TryAddSingleton(options);
+        builder.AddStaleLocksRemovalJob();
 
         return builder.AddLocks<NpgsqlLockManager>();
     }
@@ -34,9 +35,9 @@ public static class WabDavOptionsBuilderExtensions
     /// <returns>The web dav options builder.</returns>
     public static WebDavOptionsBuilder AddNpgsqlPropertyStore(
         this WebDavOptionsBuilder builder,
-        Action<NpgsqlPropertyStoreOptions> configureOptions)
+        Action<SqlPropertyStoreOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
-        return builder.AddPropertyStore<NpgsqlPropertyStoreOptions, NpgsqlPropertyStore>(configureOptions);
+        return builder.AddPropertyStore<SqlPropertyStoreOptions, NpgsqlPropertyStore>(configureOptions);
     }
 }

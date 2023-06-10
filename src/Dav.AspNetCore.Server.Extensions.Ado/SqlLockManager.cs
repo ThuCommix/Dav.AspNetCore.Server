@@ -1,32 +1,35 @@
 using System.Data;
+using System.Data.Common;
 using System.Xml.Linq;
 using Dav.AspNetCore.Server.Locks;
 using Dav.AspNetCore.Server.Store;
-using Microsoft.Data.SqlClient;
 
-namespace Dav.AspNetCore.Server.Extensions.Mssql;
+namespace Dav.AspNetCore.Server.Extensions;
 
-public class SqlLockManager : ILockManager, IDisposable
+public abstract class SqlLockManager : ILockManager, IDisposable
 {
+    private readonly SqlLockOptions options;
+    private readonly Lazy<DbConnection> connection;
+
     private static readonly ValueTask<IReadOnlyCollection<LockType>> SupportedLocks = new(new List<LockType>
     {
         LockType.Exclusive,
         LockType.Shared
     });
-
-    private readonly SqlConnection connection;
-
+    
     /// <summary>
     /// Initializes a new <see cref="SqlLockManager"/> class.
     /// </summary>
-    /// <param name="options">The mssql options.</param>
-    public SqlLockManager(SqlOptions options)
+    /// <param name="options">The sql lock store options.</param>
+    protected SqlLockManager(SqlLockOptions options)
     {
         ArgumentNullException.ThrowIfNull(options, nameof(options));
-        connection = new SqlConnection(options.ConnectionString);
+        
+        this.options = options;
+        connection = new Lazy<DbConnection>(() => CreateConnection(options.ConnectionString));
     }
     
-    /// <summary>
+        /// <summary>
     /// Locks the resource async.
     /// </summary>
     /// <param name="uri">The uri.</param>
@@ -47,8 +50,8 @@ public class SqlLockManager : ILockManager, IDisposable
         ArgumentNullException.ThrowIfNull(uri, nameof(uri));
         ArgumentNullException.ThrowIfNull(owner, nameof(owner));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
         
         var activeLocks = await GetLocksAsync(uri, cancellationToken);
         if ((activeLocks.All(x => x.LockType == LockType.Shared) &&
@@ -65,17 +68,17 @@ public class SqlLockManager : ILockManager, IDisposable
                 DateTime.UtcNow);
             
             var depth = uri.LocalPath.Count(x => x == '/') - 1;
-                
-            await using var command = connection.CreateCommand();
-            command.CommandText = "INSERT INTO dav_aspnetcore_server_resource_lock VALUES (@Id, @Uri, @LockType, @Owner, @Recursive, @Timeout, @Issued, @Depth)";
-            command.Parameters.Add(new SqlParameter("@Id", newLock.Id.AbsoluteUri));
-            command.Parameters.Add(new SqlParameter("@Uri", newLock.Uri.LocalPath));
-            command.Parameters.Add(new SqlParameter("@LockType", (int)newLock.LockType));
-            command.Parameters.Add(new SqlParameter("@Owner", newLock.Owner.ToString(SaveOptions.DisableFormatting)));
-            command.Parameters.Add(new SqlParameter("@Recursive", newLock.Recursive));
-            command.Parameters.Add(new SqlParameter("@Timeout", (long)newLock.Timeout.TotalSeconds));
-            command.Parameters.Add(new SqlParameter("@Issued", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
-            command.Parameters.Add(new SqlParameter("@Depth", depth));
+
+            await using var command = GetInsertCommand(
+                connection.Value,
+                newLock.Id.AbsoluteUri,
+                newLock.Uri.LocalPath,
+                newLock.LockType,
+                newLock.Owner,
+                newLock.Recursive,
+                (long)newLock.Timeout.TotalSeconds,
+                (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds,
+                depth);
             
             var affectedRows = await command.ExecuteNonQueryAsync(cancellationToken);
             if (affectedRows > 0)
@@ -84,7 +87,7 @@ public class SqlLockManager : ILockManager, IDisposable
         
         return new LockResult(DavStatusCode.Locked);
     }
-
+        
     /// <summary>
     /// Refreshes the resource lock async.
     /// </summary>
@@ -102,24 +105,24 @@ public class SqlLockManager : ILockManager, IDisposable
         ArgumentNullException.ThrowIfNull(uri, nameof(uri));
         ArgumentNullException.ThrowIfNull(token, nameof(token));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
-        
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT TOP 1 Id FROM dav_aspnetcore_server_resource_lock WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
-        command.Parameters.Add(new SqlParameter("@Id", token.AbsoluteUri));
-        command.Parameters.Add(new SqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
+
+        await using var command = GetActiveLockByIdCommand(
+            connection.Value,
+            token.AbsoluteUri,
+            uri.LocalPath,
+            (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
         {
             var id = reader.GetString("Id");
-            await using var updateCommand = connection.CreateCommand();
-            updateCommand.CommandText = "UPDATE dav_aspnetcore_server_resource_lock SET Timeout = @Timeout, Issued = @TotalSeconds WHERE Id = @Id";
-            updateCommand.Parameters.Add(new SqlParameter("@Id", id));
-            updateCommand.Parameters.Add(new SqlParameter("@Timeout", (long)timeout.TotalSeconds));
-            updateCommand.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+            await using var updateCommand = GetRefreshCommand(
+                connection.Value,
+                id,
+                (long)timeout.TotalSeconds,
+                (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
 
             var affectedRows = await updateCommand.ExecuteNonQueryAsync(cancellationToken);
             if (affectedRows > 0)
@@ -144,22 +147,20 @@ public class SqlLockManager : ILockManager, IDisposable
         ArgumentNullException.ThrowIfNull(uri, nameof(uri));
         ArgumentNullException.ThrowIfNull(token, nameof(token));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
         
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT TOP 1 Id FROM dav_aspnetcore_server_resource_lock WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
-        command.Parameters.Add(new SqlParameter("@Id", token.AbsoluteUri));
-        command.Parameters.Add(new SqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        await using var command = GetActiveLockByIdCommand(
+            connection.Value,
+            token.AbsoluteUri,
+            uri.LocalPath,
+            (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
         {
             var id = reader.GetString("Id");
-            await using var deleteCommand = connection.CreateCommand();
-            deleteCommand.CommandText = "DELETE FROM dav_aspnetcore_server_resource_lock WHERE Id = @Id";
-            deleteCommand.Parameters.Add(new SqlParameter("@Id", id));
+            await using var deleteCommand = GetDeleteCommand(connection.Value, id);
 
             var affectedRows = await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
             if (affectedRows > 0)
@@ -168,7 +169,7 @@ public class SqlLockManager : ILockManager, IDisposable
 
         return DavStatusCode.Conflict;
     }
-
+        
     /// <summary>
     /// Gets all active resource locks async.
     /// </summary>
@@ -181,19 +182,17 @@ public class SqlLockManager : ILockManager, IDisposable
     {
         ArgumentNullException.ThrowIfNull(uri, nameof(uri));
         
-        if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync(cancellationToken);
-
-        await RemoveStaleLocksAsync();
+        if (connection.Value.State != ConnectionState.Open)
+            await connection.Value.OpenAsync(cancellationToken);
 
         var allActiveLocks = new List<ResourceLock>();
         var depth = uri.LocalPath.Count(x => x == '/') - 1;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM dav_aspnetcore_server_resource_lock WHERE ((Depth <= @Depth AND Recursive = 1) OR Uri = @Uri) AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
-        command.Parameters.Add(new SqlParameter("@Depth", depth));
-        command.Parameters.Add(new SqlParameter("@Uri", uri.LocalPath));
-        command.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        await using var command = GetActiveLocksCommand(
+            connection.Value,
+            uri.LocalPath,
+            depth,
+            (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -212,7 +211,7 @@ public class SqlLockManager : ILockManager, IDisposable
 
         return allActiveLocks;
     }
-
+        
     /// <summary>
     /// Gets the supported locks async.
     /// </summary>
@@ -231,15 +230,122 @@ public class SqlLockManager : ILockManager, IDisposable
     /// </summary>
     public void Dispose()
     {
-        connection.Dispose();
+        connection.Value.Dispose();
     }
-    
-    private async ValueTask RemoveStaleLocksAsync()
+
+    /// <summary>
+    /// Removes stale locks async.
+    /// </summary>
+    public async Task RemoveStaleLocksAsync()
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM dav_aspnetcore_server_resource_lock WHERE (Issued + Timeout < @TotalSeconds AND Timeout <> 0)";
-        command.Parameters.Add(new SqlParameter("@TotalSeconds", (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds));
+        await using var command = GetDeleteStaleCommand(
+            connection.Value,
+            (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds);
         
         await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Creates a db connection.
+    /// </summary>
+    /// <param name="connectionString">The connection string.</param>
+    /// <returns>The db connection.</returns>
+    protected abstract DbConnection CreateConnection(string connectionString);
+
+    /// <summary>
+    /// Gets the insert command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="id">The id.</param>
+    /// <param name="uri">The uri.</param>
+    /// <param name="lockType">The lock type.</param>
+    /// <param name="owner">The owner.</param>
+    /// <param name="recursive">A value indicating whether the lock is recursive.</param>
+    /// <param name="timeout">The timeout.</param>
+    /// <param name="totalSeconds">The total seconds.</param>
+    /// <param name="depth">The depth.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetInsertCommand(
+        DbConnection connection,
+        string id,
+        string uri,
+        LockType lockType,
+        XElement owner,
+        bool recursive,
+        long timeout,
+        long totalSeconds,
+        int depth);
+
+    /// <summary>
+    /// Gets the active locks command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="uri">The uri.</param>
+    /// <param name="depth">The depth.</param>
+    /// <param name="totalSeconds">The total seconds.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetActiveLocksCommand(
+        DbConnection connection,
+        string uri,
+        int depth,
+        long totalSeconds);
+
+    /// <summary>
+    /// Gets the active lock by id command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="id">The id.</param>
+    /// <param name="uri">The uri.</param>
+    /// <param name="totalSeconds">The total seconds.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetActiveLockByIdCommand(
+        DbConnection connection,
+        string id,
+        string uri,
+        long totalSeconds);
+
+    /// <summary>
+    /// Gets the refresh command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="id">The id.</param>
+    /// <param name="timeout">The timeout.</param>
+    /// <param name="totalSeconds">The total seconds.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetRefreshCommand(
+        DbConnection connection,
+        string id,
+        long timeout,
+        long totalSeconds);
+    
+    /// <summary>
+    /// Gets the delete command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="id">The id.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetDeleteCommand(
+        DbConnection connection,
+        string id);
+
+    /// <summary>
+    /// Gets the delete stale locks command.
+    /// </summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="totalSeconds">The total seconds.</param>
+    /// <returns>The prepared command.</returns>
+    protected abstract DbCommand GetDeleteStaleCommand(
+        DbConnection connection,
+        long totalSeconds);
+    
+    /// <summary>
+    /// Gets the table id.
+    /// </summary>
+    /// <returns></returns>
+    protected string GetTableId()
+    {
+        return string.IsNullOrWhiteSpace(options.Schema) 
+            ? $"[{options.Table}]" 
+            : $"[{options.Schema}].[{options.Table}]";
     }
 }

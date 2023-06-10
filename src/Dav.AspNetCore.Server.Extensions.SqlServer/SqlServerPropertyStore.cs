@@ -1,15 +1,15 @@
 using System.Data.Common;
-using Npgsql;
+using Microsoft.Data.SqlClient;
 
-namespace Dav.AspNetCore.Server.Extensions.Npgsql;
+namespace Dav.AspNetCore.Server.Extensions.SqlServer;
 
-public class NpgsqlPropertyStore : SqlPropertyStore
+public class SqlServerPropertyStore : SqlPropertyStore
 {
     /// <summary>
-    /// Initializes a new <see cref="NpgsqlPropertyStore"/> class.
+    /// Initializes a new <see cref="SqlServerPropertyStore"/> class.
     /// </summary>
     /// <param name="options">The sql property store options.</param>
-    public NpgsqlPropertyStore(SqlPropertyStoreOptions options)
+    public SqlServerPropertyStore(SqlPropertyStoreOptions options)
         : base(options)
     {
     }
@@ -20,7 +20,7 @@ public class NpgsqlPropertyStore : SqlPropertyStore
     /// <param name="connectionString">The connection string.</param>
     /// <returns>The db connection.</returns>
     protected override DbConnection CreateConnection(string connectionString) 
-        => new NpgsqlConnection(connectionString);
+        => new SqlConnection(connectionString);
 
     /// <summary>
     /// Gets the insert command.
@@ -40,10 +40,10 @@ public class NpgsqlPropertyStore : SqlPropertyStore
     {
         var insertCommand = connection.CreateCommand();
         insertCommand.CommandText = $"INSERT INTO {GetTableId()} VALUES (@Uri, @ElementName, @ElementNamespace, @ElementValue)";
-        insertCommand.Parameters.Add(new NpgsqlParameter("@Uri", uri));
-        insertCommand.Parameters.Add(new NpgsqlParameter("@ElementName", elementName));
-        insertCommand.Parameters.Add(new NpgsqlParameter("@ElementNamespace", elementNamespace));
-        insertCommand.Parameters.Add(new NpgsqlParameter("@ElementValue", elementValue));
+        insertCommand.Parameters.Add(new SqlParameter("@Uri", uri));
+        insertCommand.Parameters.Add(new SqlParameter("@ElementName", elementName));
+        insertCommand.Parameters.Add(new SqlParameter("@ElementNamespace", elementNamespace));
+        insertCommand.Parameters.Add(new SqlParameter("@ElementValue", elementValue));
 
         return insertCommand;
     }
@@ -58,7 +58,7 @@ public class NpgsqlPropertyStore : SqlPropertyStore
     {
         var deleteCommand = connection.CreateCommand();
         deleteCommand.CommandText = $"DELETE FROM {GetTableId()} WHERE Uri = @Uri";
-        deleteCommand.Parameters.Add(new NpgsqlParameter("@Uri", uri));
+        deleteCommand.Parameters.Add(new SqlParameter("@Uri",uri));
 
         return deleteCommand;
     }
@@ -73,7 +73,7 @@ public class NpgsqlPropertyStore : SqlPropertyStore
     {
         var command = connection.CreateCommand();
         command.CommandText = $"SELECT * FROM {GetTableId()} WHERE Uri = @Uri";
-        command.Parameters.Add(new NpgsqlParameter("@Uri", uri));
+        command.Parameters.Add(new SqlParameter("@Uri", uri));
 
         return command;
     }
@@ -87,7 +87,7 @@ public class NpgsqlPropertyStore : SqlPropertyStore
     /// <returns>The prepared command.</returns>
     protected override DbCommand GetCopyCommand(
         DbConnection connection, 
-        string sourceUri, 
+        string sourceUri,
         string destinationUri)
     {
         var copyCommand = connection.CreateCommand();
@@ -99,8 +99,8 @@ ElementNamespace,
 ElementValue
 FROM {GetTableId()} WHERE Uri = @SourceUri";
         
-        copyCommand.Parameters.Add(new NpgsqlParameter("@SourceUri", sourceUri));
-        copyCommand.Parameters.Add(new NpgsqlParameter("@DestinationUri", destinationUri));
+        copyCommand.Parameters.Add(new SqlParameter("@SourceUri", sourceUri));
+        copyCommand.Parameters.Add(new SqlParameter("@DestinationUri", destinationUri));
 
         return copyCommand;
     }

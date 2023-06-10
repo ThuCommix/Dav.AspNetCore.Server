@@ -14,14 +14,15 @@ public static class WabDavOptionsBuilderExtensions
     /// <returns>The web dav options builder.</returns>
     public static WebDavOptionsBuilder AddSqliteLocks(
         this WebDavOptionsBuilder builder,
-        Action<SqliteOptions> configureOptions)
+        Action<SqlLockOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
 
-        var options = new SqliteOptions();
+        var options = new SqlLockOptions();
         configureOptions(options);
         
         builder.Services.TryAddSingleton(options);
+        builder.AddStaleLocksRemovalJob();
 
         return builder.AddLocks<SqliteLockManager>();
     }
@@ -34,9 +35,9 @@ public static class WabDavOptionsBuilderExtensions
     /// <returns>The web dav options builder.</returns>
     public static WebDavOptionsBuilder AddSqlitePropertyStore(
         this WebDavOptionsBuilder builder,
-        Action<SqlitePropertyStoreOptions> configureOptions)
+        Action<SqlPropertyStoreOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder, nameof(builder));
-        return builder.AddPropertyStore<SqlitePropertyStoreOptions, SqlitePropertyStore>(configureOptions);
+        return builder.AddPropertyStore<SqlPropertyStoreOptions, SqlitePropertyStore>(configureOptions);
     }
 }

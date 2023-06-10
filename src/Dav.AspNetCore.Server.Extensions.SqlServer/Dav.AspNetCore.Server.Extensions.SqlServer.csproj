@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <PackageId>Dav.AspNetCore.Server.Extensions.Mssql</PackageId>
+        <PackageId>Dav.AspNetCore.Server.Extensions.SqlServer</PackageId>
         <PackageVersion>1.0.0</PackageVersion>
         <Authors>Kevin Scholz</Authors>
         <Company>Kevin Scholz</Company>
@@ -15,7 +15,7 @@
         <PackageProjectUrl>https://github.com/ThuCommix/Dav.AspNetCore.Server</PackageProjectUrl>
         <RepositoryUrl>https://github.com/ThuCommix/Dav.AspNetCore.Server</RepositoryUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Description>This library provides mssql implementations for lock manager and property store.</Description>
+        <Description>This library provides sql server implementations for lock manager and property store.</Description>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
@@ -28,5 +28,22 @@
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\" Visible="false" />
     </ItemGroup>
+    
+    <PropertyGroup>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Dav.AspNetCore.Server.Extensions.Ado\Dav.AspNetCore.Server.Extensions.Ado.csproj">
+          <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+          <IncludeAssets>Dav.AspNetCore.Server.Extensions.Ado.dll</IncludeAssets>
+      </ProjectReference>
+    </ItemGroup>
+
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))"/>
+        </ItemGroup>
+    </Target>
 
 </Project>
