@@ -100,7 +100,7 @@ public class NpgsqlLockManager : SqlLockManager
         long totalSeconds)
     {
         var command = connection.CreateCommand();
-        command.CommandText = $"SELECT TOP 1 Id FROM {GetTableId()} WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0)";
+        command.CommandText = $"SELECT Id FROM {GetTableId()} WHERE Id = @Id AND Uri = @Uri AND (Issued + Timeout > @TotalSeconds OR Timeout = 0) LIMIT 1";
         command.Parameters.Add(new NpgsqlParameter("@Id", id));
         command.Parameters.Add(new NpgsqlParameter("@Uri", uri));
         command.Parameters.Add(new NpgsqlParameter("@TotalSeconds", totalSeconds));
