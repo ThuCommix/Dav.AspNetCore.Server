@@ -8,7 +8,7 @@
 
     <PropertyGroup>
         <PackageId>Dav.AspNetCore.Server.Extensions.Npgsql</PackageId>
-        <PackageVersion>2.0.0</PackageVersion>
+        <PackageVersion>2.0.1</PackageVersion>
         <Authors>Kevin Scholz</Authors>
         <Company>Kevin Scholz</Company>
         <PackageTags>WebDav;AspNetCore;Asp;Dav;AspNetCore WebDav;AspNetCore Dav;Asp WebDav;Asp Dav;Postgres;Npgsql;SQL;ADO</PackageTags>
