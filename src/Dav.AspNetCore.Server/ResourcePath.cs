@@ -7,6 +7,11 @@ namespace Dav.AspNetCore.Server;
 /// </summary>
 public class ResourcePath
 {
+    /// <summary>
+    /// Gets the root path.
+    /// </summary>
+    public static ResourcePath Root => new("/");
+    
     private readonly string value;
     private readonly Lazy<ResourcePath?> parentPath;
 
@@ -30,12 +35,36 @@ public class ResourcePath
     /// Gets the parent resource path.
     /// </summary>
     public ResourcePath? Parent => parentPath.Value;
-    
+
+    /// <summary>
+    /// Gets the resource path name.
+    /// </summary>
+    public string? Name => value == "/" ? null : GetPathStringParts(this)[^1].Trim('/');
+
     /// <summary>Returns a string that represents the current object.</summary>
     /// <returns>A string that represents the current object.</returns>
     public override string ToString()
     {
         return this;
+    }
+
+    /// <summary>Determines whether the specified object is equal to the current object.</summary>
+    /// <param name="obj">The object to compare with the current object.</param>
+    /// <returns>
+    /// <see langword="true" /> if the specified object  is equal to the current object; otherwise, <see langword="false" />.</returns>
+    public override bool Equals(object? obj)
+    {
+        if (obj == null)
+            return false;
+
+        return obj is ResourcePath other && value.Equals(other.value);
+    }
+
+    /// <summary>Serves as the default hash function.</summary>
+    /// <returns>A hash code for the current object.</returns>
+    public override int GetHashCode()
+    {
+        return value.GetHashCode();
     }
 
     /// <summary>
@@ -155,6 +184,18 @@ public class ResourcePath
     }
 
     public static explicit operator ResourcePath(string value) => new(value);
+    
+    public static bool operator ==(ResourcePath? value, ResourcePath? other)
+    {
+        if (value is null)
+        {
+            return other is null;
+        }
+
+        return value.Equals(other);
+    }
+
+    public static bool operator !=(ResourcePath? value, ResourcePath? other) => !(value == other);
     
     private static string[] GetPathStringParts(ResourcePath path)
     {

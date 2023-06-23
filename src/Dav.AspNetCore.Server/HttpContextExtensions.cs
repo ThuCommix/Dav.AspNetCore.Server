@@ -81,12 +81,12 @@ internal static class HttpContextExtensions
     
     public static Task SendLockedAsync(
         this HttpContext context, 
-        Uri uri,
+        ResourcePath path,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
 
-        var href = new XElement(XmlNames.Href, $"{context.Request.PathBase}{uri.AbsolutePath}");
+        var href = new XElement(XmlNames.Href, $"{context.Request.PathBase}{path}");
         var lockTokenSubmitted = new XElement(XmlNames.LockTokenSubmitted, href);
         var error = new XElement(XmlNames.Error, lockTokenSubmitted);
         var document = new XDocument(

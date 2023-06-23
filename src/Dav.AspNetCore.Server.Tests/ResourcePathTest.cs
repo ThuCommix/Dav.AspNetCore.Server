@@ -84,4 +84,14 @@ public class ResourcePathTest
         // assert
         Assert.Equal("/test/hello%20test", path);
     }
+    
+    [Fact]
+    public void Name()
+    {
+        // act
+        var path = new ResourcePath("/test/hello test");
+
+        // assert
+        Assert.Equal("hello test", path.Name);
+    }
 }

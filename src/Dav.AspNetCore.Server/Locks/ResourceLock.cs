@@ -6,7 +6,7 @@ namespace Dav.AspNetCore.Server.Locks;
 /// Initializes a new <see cref="ResourceLock"/> class.
 /// </summary>
 /// <param name="Id">The resource lock id.</param>
-/// <param name="Uri">The resource uri.</param>
+/// <param name="Path">The resource path.</param>
 /// <param name="LockType">The lock type.</param>
 /// <param name="Owner">The owner.</param>
 /// <param name="Recursive">A value indicating whether the resource lock is recursive.</param>
@@ -14,7 +14,7 @@ namespace Dav.AspNetCore.Server.Locks;
 /// <param name="IssueDate">The lock issue date.</param>
 public record ResourceLock(
     Uri Id,
-    Uri Uri,
+    ResourcePath Path,
     LockType LockType,
     XElement Owner,
     bool Recursive,

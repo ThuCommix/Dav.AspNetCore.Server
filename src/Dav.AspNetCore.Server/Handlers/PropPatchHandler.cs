@@ -79,7 +79,7 @@ internal class PropPatchHandler : RequestHandler
             }
         }
 
-        var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{Item.Uri.AbsolutePath}");
+        var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{Item.Path}");
         var response = new XElement(XmlNames.Response, href);
         var multiStatus = new XElement(XmlNames.MultiStatus, response);
         var document = new XDocument(

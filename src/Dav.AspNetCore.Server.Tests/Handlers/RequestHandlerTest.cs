@@ -37,13 +37,13 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -77,7 +77,7 @@ public class RequestHandlerTest
         httpContext.SetupSet(context => context.Response.StatusCode = StatusCodes.Status404NotFound);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(new Uri("/"), It.IsAny<CancellationToken>())).ReturnsAsync((IStoreCollection?)null);
+        store.Setup(s => s.GetItemAsync(new ResourcePath("/"), It.IsAny<CancellationToken>())).ReturnsAsync((IStoreCollection?)null);
 
         var requestHandler = new RequestHandlerImpl();
         
@@ -111,11 +111,11 @@ public class RequestHandlerTest
         httpContext.Setup(s => s.Request.Method).Returns(WebDavMethods.Get);
         httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -151,12 +151,12 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -166,7 +166,7 @@ public class RequestHandlerTest
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
         if (locked)
         {
-            lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+            lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { resourceLock });
         }
 
@@ -194,7 +194,7 @@ public class RequestHandlerTest
         }
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -218,13 +218,13 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -232,7 +232,7 @@ public class RequestHandlerTest
             DateTime.Now);
         
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-        lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+        lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
         var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
@@ -253,7 +253,7 @@ public class RequestHandlerTest
         httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -281,9 +281,9 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         
         var etag = matchEtag ? itemEtag : "B";
         var headers = new HeaderDictionary
@@ -316,7 +316,7 @@ public class RequestHandlerTest
         requestServices.AddSingleton(propertyManager.Object);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -341,9 +341,9 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         
         var headers = new HeaderDictionary
         {
@@ -367,7 +367,7 @@ public class RequestHandlerTest
         requestServices.AddSingleton(propertyManager.Object);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -392,13 +392,13 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -406,7 +406,7 @@ public class RequestHandlerTest
             DateTime.Now);
         
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-        lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+        lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
         var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
@@ -436,7 +436,7 @@ public class RequestHandlerTest
         }
 
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -460,13 +460,13 @@ public class RequestHandlerTest
         var requestServices = new ServiceCollection();
         var options = new WebDavOptions();
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -474,7 +474,7 @@ public class RequestHandlerTest
             DateTime.Now);
         
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-        lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+        lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
         
         var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
@@ -495,7 +495,7 @@ public class RequestHandlerTest
         httpContext.SetupSet(s => s.Response.StatusCode = StatusCodes.Status412PreconditionFailed);
 
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -537,13 +537,13 @@ public class RequestHandlerTest
         httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
         httpContext.SetupSet(s => s.Response.StatusCode = StatusCodes.Status412PreconditionFailed);
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync((IStoreItem?)null);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -601,13 +601,13 @@ public class RequestHandlerTest
 
         requestServices.AddSingleton(propertyManager.Object);
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -655,7 +655,7 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-        lockManager.Setup(s => s.GetLocksAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))
+        lockManager.Setup(s => s.GetLocksAsync(It.IsAny<ResourcePath>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ResourceLock>());
 
         requestServices.AddSingleton(options);
@@ -685,13 +685,13 @@ public class RequestHandlerTest
 
         requestServices.AddSingleton(propertyManager.Object);
                     
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -734,13 +734,13 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -798,13 +798,13 @@ public class RequestHandlerTest
 
         requestServices.AddSingleton(propertyManager.Object);
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -861,13 +861,13 @@ public class RequestHandlerTest
 
         requestServices.AddSingleton(propertyManager.Object);
 
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -891,10 +891,10 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -904,12 +904,12 @@ public class RequestHandlerTest
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
         if (isLocked)
         {
-            lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+            lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { resourceLock });
         }
         else
         {
-            lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+            lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<ResourceLock>());
         }
 
@@ -928,13 +928,13 @@ public class RequestHandlerTest
         var collection = new Mock<IStoreCollection>();
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
         await requestHandler.HandleRequestAsync(httpContext.Object, store.Object);
 
         // act
-        var result = await requestHandler.CheckLockedAsync(collectionUri);
+        var result = await requestHandler.CheckLockedAsync(collectionPath);
         
         // assert
         Assert.Equal(isLocked ,result);
@@ -956,10 +956,10 @@ public class RequestHandlerTest
 
         var options = new WebDavOptions();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            collectionUri,
+            collectionPath,
             LockType.Exclusive,
             new XElement(XName.Get("owner")),
             true,
@@ -967,7 +967,7 @@ public class RequestHandlerTest
             DateTime.Now);
         
         var lockManager = new Mock<ILockManager>(MockBehavior.Strict);
-        lockManager.Setup(s => s.GetLocksAsync(collectionUri, It.IsAny<CancellationToken>()))
+        lockManager.Setup(s => s.GetLocksAsync(collectionPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { resourceLock });
 
         var propertyManager = new Mock<IPropertyManager>(MockBehavior.Strict);
@@ -992,16 +992,16 @@ public class RequestHandlerTest
         httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
         
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
         await requestHandler.HandleRequestAsync(httpContext.Object, store.Object);
 
         // act
-        var result = await requestHandler.ValidateTokenAsync(collectionUri);
+        var result = await requestHandler.ValidateTokenAsync(collectionPath);
         
         // assert
         Assert.Equal(tokenMatch,result);
@@ -1047,13 +1047,13 @@ public class RequestHandlerTest
 
         var item = new Mock<IStoreItem>();
         
-        var collectionUri = new Uri("/");
+        var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Uri).Returns(collectionUri);
+        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
-        store.Setup(s => s.GetItemAsync(collectionUri, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
+        store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
         var requestHandler = new RequestHandlerImpl();
 
@@ -1092,8 +1092,8 @@ public class RequestHandlerTest
             return Task.CompletedTask;
         }
 
-        public ValueTask<bool> CheckLockedAsync(Uri uri) => base.CheckLockedAsync(uri);
+        public ValueTask<bool> CheckLockedAsync(ResourcePath path) => base.CheckLockedAsync(path);
 
-        public ValueTask<bool> ValidateTokenAsync(Uri uri) => base.ValidateTokenAsync(uri);
+        public ValueTask<bool> ValidateTokenAsync(ResourcePath path) => base.ValidateTokenAsync(path);
     }
 }

@@ -27,7 +27,7 @@ public class PropertyManagerTest
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         var propertyManager = new PropertyManager(serviceProvider.Object);
 
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
 
         // act
         var propertyMetadata = propertyManager.GetPropertyMetadata(storeItem, property.Name);
@@ -49,7 +49,7 @@ public class PropertyManagerTest
         var serviceProviderMock = new Mock<IServiceProvider>(MockBehavior.Strict);
         var propertyManager = new PropertyManager(serviceProviderMock.Object);
 
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
 
         // act
         var propertyMetadata = propertyManager.GetPropertyMetadata(storeItem, XName.Get("MyProperty"));
@@ -75,7 +75,7 @@ public class PropertyManagerTest
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         var propertyManager = new PropertyManager(serviceProvider.Object);
 
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         
         // act
         var results = await propertyManager.GetPropertyNamesAsync(storeItem);
@@ -99,7 +99,7 @@ public class PropertyManagerTest
                 Protected: true,
                 Computed: true));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var property2 = XName.Get("MyProperty2");
@@ -125,7 +125,7 @@ public class PropertyManagerTest
     public async Task GetPropertyAsync_MissingProperty_ReturnsNotFound()
     {
         // arrange
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -150,7 +150,7 @@ public class PropertyManagerTest
             XName.Get("MyProperty"),
             metadata: new PropertyMetadata(DefaultValue: defaultValue));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -177,7 +177,7 @@ public class PropertyManagerTest
                 return ValueTask.CompletedTask;
             });
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -207,7 +207,7 @@ public class PropertyManagerTest
                 return ValueTask.CompletedTask;
             });
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -231,7 +231,7 @@ public class PropertyManagerTest
         var property = Property.RegisterProperty<TestStoreItem>(
             XName.Get("MyProperty"));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
@@ -258,7 +258,7 @@ public class PropertyManagerTest
         var property = Property.RegisterProperty<TestStoreItem>(
             XName.Get("MyProperty"));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
@@ -286,7 +286,7 @@ public class PropertyManagerTest
             XName.Get("MyProperty"),
             metadata: new PropertyMetadata(Protected: true));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -308,7 +308,7 @@ public class PropertyManagerTest
             XName.Get("MyProperty"),
             metadata: new PropertyMetadata(Computed: true));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -326,7 +326,7 @@ public class PropertyManagerTest
     public async Task SetPropertyAsync_MissingProperty_ReturnsNotFound()
     {
         // arrange
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -347,7 +347,7 @@ public class PropertyManagerTest
         var property = Property.RegisterProperty<TestStoreItem>(
             XName.Get("MyProperty"));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -369,7 +369,7 @@ public class PropertyManagerTest
             XName.Get("MyProperty"),
             change: (_, _) => ValueTask.CompletedTask);
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
         
         var propertyManager = new PropertyManager(serviceProvider.Object);
@@ -388,7 +388,7 @@ public class PropertyManagerTest
     {
         // arrange
         var propertyName = XName.Get("MyProperty");
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);
@@ -419,7 +419,7 @@ public class PropertyManagerTest
         var property = Property.RegisterProperty<TestStoreItem>(
             XName.Get("MyProperty"));
         
-        var storeItem = new TestStoreItem(new Uri("/"));
+        var storeItem = new TestStoreItem(new ResourcePath("/"));
         var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
 
         var propertyStore = new Mock<IPropertyStore>(MockBehavior.Strict);

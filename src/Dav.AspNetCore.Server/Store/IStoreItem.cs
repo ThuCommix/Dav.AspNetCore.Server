@@ -3,9 +3,9 @@ namespace Dav.AspNetCore.Server.Store;
 public interface IStoreItem
 {
     /// <summary>
-    /// Gets the uri.
+    /// Gets the resource path.
     /// </summary>
-    Uri Uri { get; }
+    ResourcePath Path { get; }
 
     /// <summary>
     /// Gets a readable stream async.

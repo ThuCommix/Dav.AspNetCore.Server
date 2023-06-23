@@ -41,20 +41,20 @@ internal class CopyHandler : RequestHandler
         if (!string.IsNullOrWhiteSpace(Context.Request.PathBase))
         {
             if (Context.Request.PathBase.HasValue)
-                destination = new Uri(destination.LocalPath.Substring(Context.Request.PathBase.Value.Length));
+                destination = new ResourcePath(destination.ToString().Substring(Context.Request.PathBase.Value.Length));
         }
         
         var overwrite = WebDavHeaders.Overwrite ?? false;
-        var destinationParentUri = destination.GetParent();
+        var destinationParentPath = destination.Parent ?? ResourcePath.Root;
 
-        var destinationCollection = await Store.GetCollectionAsync(destinationParentUri, cancellationToken);
+        var destinationCollection = await Store.GetCollectionAsync(destinationParentPath, cancellationToken);
         if (destinationCollection == null)
         {
             Context.SetResult(DavStatusCode.Conflict);
             return;
         }
         
-        var destinationItemName = destination.GetRelativeUri(destinationParentUri).LocalPath.Trim('/');
+        var destinationItemName = ResourcePath.GetRelativePath(destination, destinationParentPath).Name!;
         var destinationItem = await Store.GetItemAsync(destination, cancellationToken);
         if (destinationItem != null && !overwrite)
         {
@@ -84,7 +84,7 @@ internal class CopyHandler : RequestHandler
         var responses = new List<XElement>();
         foreach (var davError in errors)
         {
-            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Uri.AbsolutePath}");
+            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Path}");
             var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)davError.StatusCode} {davError.StatusCode.GetDisplayName()}");
             var response = new XElement(XmlNames.Response, href, status);
             
@@ -114,14 +114,14 @@ internal class CopyHandler : RequestHandler
         ICollection<WebDavError> errors,
         CancellationToken cancellationToken = default)
     {
-        var destinationUri = UriHelper.Combine(destination.Uri, name);
-        var isLocked = await CheckLockedAsync(destinationUri, cancellationToken);
+        var destinationPath = ResourcePath.Combine(destination.Path, name);
+        var isLocked = await CheckLockedAsync(destinationPath, cancellationToken);
         if (isLocked)
         {
-            var tokenSubmitted = await ValidateTokenAsync(destinationUri, cancellationToken);
+            var tokenSubmitted = await ValidateTokenAsync(destinationPath, cancellationToken);
             if (!tokenSubmitted)
             {
-                errors.Add(new WebDavError(destinationUri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
+                errors.Add(new WebDavError(destinationPath, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
                 return false;
             }
         }
@@ -137,7 +137,7 @@ internal class CopyHandler : RequestHandler
         var result = await item.CopyAsync(destination, name, true, cancellationToken);
         if (result.Item == null)
         {
-            errors.Add(new WebDavError(destinationUri, result.StatusCode, null));
+            errors.Add(new WebDavError(destinationPath, result.StatusCode, null));
             return false;
         }
 
@@ -154,7 +154,7 @@ internal class CopyHandler : RequestHandler
                 if (destinationCopy == null)
                     throw new InvalidOperationException("If the copied item is a collection, the copy result must also be a collection.");
                 
-                var itemName = subItem.Uri.GetRelativeUri(collection.Uri).LocalPath.TrimStart('/');
+                var itemName = ResourcePath.GetRelativePath(subItem.Path, collection.Path).Name!;
                 var error = await CopyItemRecursiveAsync(subItem, destinationCopy, itemName, recursive, errors, cancellationToken);
                 if (!error)
                     subItemError = true;

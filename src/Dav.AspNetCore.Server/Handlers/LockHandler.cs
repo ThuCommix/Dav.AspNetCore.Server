@@ -13,8 +13,7 @@ internal class LockHandler : RequestHandler
     /// <returns></returns>
     protected override async Task HandleRequestAsync(CancellationToken cancellationToken = default)
     {
-        var requestUri = Context.Request.Path.ToUri();
-        
+        var requestPath = new ResourcePath(Context.Request.Path);
         if (WebDavHeaders.Timeouts.Count == 0)
         {
             Context.SetResult(DavStatusCode.BadRequest);
@@ -44,7 +43,7 @@ internal class LockHandler : RequestHandler
              Context.Request.ContentLength == 0))
         {
             var condition = WebDavHeaders.If
-                .FirstOrDefault(x => x.Uri == null || x.Uri == requestUri);
+                .FirstOrDefault(x => x.Uri == null || x.Uri.AbsolutePath == requestPath);
 
             if (condition == null)
             {
@@ -53,11 +52,11 @@ internal class LockHandler : RequestHandler
             }
             
             var activeLocks = await LockManager.GetLocksAsync(
-                requestUri,
+                requestPath,
                 cancellationToken);
 
             var activeLock = activeLocks
-                .FirstOrDefault(x => x.Uri == requestUri && condition.Tokens.Any(z => x.Id.AbsoluteUri == z.Value));
+                .FirstOrDefault(x => x.Path == requestPath && condition.Tokens.Any(z => x.Id.AbsoluteUri == z.Value));
             
             if (activeLock == null)
             {
@@ -66,7 +65,7 @@ internal class LockHandler : RequestHandler
             }
 
             result = await LockManager.RefreshLockAsync(
-                requestUri,
+                requestPath,
                 activeLock.Id,
                 timeout,
                 cancellationToken);
@@ -103,7 +102,7 @@ internal class LockHandler : RequestHandler
             }
 
             result = await LockManager.LockAsync(
-                requestUri,
+                requestPath,
                 exclusive != null ? LockType.Exclusive : LockType.Shared,
                 owner,
                 depth == Depth.Infinity,
@@ -112,7 +111,7 @@ internal class LockHandler : RequestHandler
 
             if (result.StatusCode == DavStatusCode.Locked)
             {
-                await Context.SendLockedAsync(requestUri, cancellationToken);
+                await Context.SendLockedAsync(requestPath, cancellationToken);
                 return;
             }
         }
@@ -134,17 +133,17 @@ internal class LockHandler : RequestHandler
     }
 
     /// <summary>
-    /// Checks if the given uri is locked async.
+    /// Checks if the given resource path is locked async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>True when the uri is locked, otherwise false.</returns>
-    protected override async ValueTask<bool> CheckLockedAsync(Uri uri, CancellationToken cancellationToken = default)
+    /// <returns>True when the resource path is locked, otherwise false.</returns>
+    protected override async ValueTask<bool> CheckLockedAsync(ResourcePath path, CancellationToken cancellationToken = default)
     {
         // the default behavior would block the request when a lock exists
         // how ever in the lock handler we can still proceed if all of them are "shared"
         // the lock manager makes sure, we only issue "shared" locks
-        var activeLocks = await LockManager.GetLocksAsync(uri, cancellationToken);
+        var activeLocks = await LockManager.GetLocksAsync(path, cancellationToken);
         return activeLocks.Any(x => x.LockType == LockType.Exclusive);
     }
 
@@ -163,7 +162,7 @@ internal class LockHandler : RequestHandler
             : $"Second-{resourceLock.Timeout.TotalSeconds:F0}");
 
         var lockToken = new XElement(XmlNames.LockToken, new XElement(XmlNames.Href, resourceLock.Id.AbsoluteUri));
-        var lockRoot = new XElement(XmlNames.LockRoot, new XElement(XmlNames.Href, $"{Context.Request.PathBase}{resourceLock.Uri.AbsolutePath}"));
+        var lockRoot = new XElement(XmlNames.LockRoot, new XElement(XmlNames.Href, $"{Context.Request.PathBase}{resourceLock.Path}"));
         var activeLock = new XElement(XmlNames.ActiveLock, lockType, lockScope, depth, owner, timeout, lockToken, lockRoot);
         var lockDiscovery = new XElement(XmlNames.LockDiscovery, activeLock);
         var prop = new XElement(XmlNames.Property, lockDiscovery);

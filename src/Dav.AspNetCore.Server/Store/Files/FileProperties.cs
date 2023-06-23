@@ -1,7 +1,7 @@
 namespace Dav.AspNetCore.Server.Store.Files;
 
 public record FileProperties(
-    Uri Uri,
+    ResourcePath Path,
     string Name,
     DateTime Created,
     DateTime LastModified,

@@ -11,7 +11,7 @@ namespace Dav.AspNetCore.Server.Handlers;
 
 internal abstract class RequestHandler : IRequestHandler
 {
-    private readonly Dictionary<Uri, IReadOnlyCollection<ResourceLock>> lockCache = new();
+    private readonly Dictionary<ResourcePath, IReadOnlyCollection<ResourceLock>> lockCache = new();
     private IPropertyStore? propertyStore;
 
     private static readonly List<string> SkipLockValidation = new()
@@ -77,11 +77,11 @@ internal abstract class RequestHandler : IRequestHandler
     {
         Context = context;
         Store = store;
+
+        var requestPath = new ResourcePath(Context.Request.Path);
+        var parentPath = requestPath.Parent ?? ResourcePath.Root;
         
-        var requestUri = context.Request.Path.ToUri();
-        var parentUri = requestUri.GetParent();
-        
-        var collection = await store.GetCollectionAsync(parentUri, cancellationToken);
+        var collection = await store.GetCollectionAsync(parentPath, cancellationToken);
         if (collection == null)
         {
             context.SetResult(DavStatusCode.NotFound);
@@ -96,13 +96,13 @@ internal abstract class RequestHandler : IRequestHandler
 
         propertyStore = Context.RequestServices.GetService<IPropertyStore>();
 
-        if (requestUri == parentUri)
+        if (requestPath == parentPath)
         {
             Item = collection;
         }
         else
         {
-            var itemName = requestUri.GetRelativeUri(Collection.Uri).LocalPath.Trim('/');
+            var itemName = ResourcePath.GetRelativePath(requestPath, Collection.Path).Name!;
             Item = await collection.GetItemAsync(itemName, cancellationToken);
         }
 
@@ -112,13 +112,13 @@ internal abstract class RequestHandler : IRequestHandler
 
         if (!SkipLockValidation.Contains(Context.Request.Method))
         {
-            var locked = await CheckLockedAsync(requestUri, cancellationToken);
+            var locked = await CheckLockedAsync(requestPath, cancellationToken);
             if (locked)
             {
-                var tokenSubmitted = await ValidateTokenAsync(requestUri, cancellationToken);
+                var tokenSubmitted = await ValidateTokenAsync(requestPath, cancellationToken);
                 if (!tokenSubmitted)
                 {
-                    await Context.SendLockedAsync(requestUri, cancellationToken);
+                    await Context.SendLockedAsync(requestPath, cancellationToken);
                     return;
                 }
             }   
@@ -131,46 +131,46 @@ internal abstract class RequestHandler : IRequestHandler
     }
 
     /// <summary>
-    /// Checks if the given uri is locked async.
+    /// Checks if the given resource path is locked async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>True when the uri is locked, otherwise false.</returns>
-    protected virtual async ValueTask<bool> CheckLockedAsync(Uri uri, CancellationToken cancellationToken = default)
+    /// <returns>True when the resource path is locked, otherwise false.</returns>
+    protected virtual async ValueTask<bool> CheckLockedAsync(ResourcePath path, CancellationToken cancellationToken = default)
     {
-        await EnsureLocksAsync(uri, cancellationToken);
-        return lockCache[uri].Count > 0;
+        await EnsureLocksAsync(path, cancellationToken);
+        return lockCache[path].Count > 0;
     }
 
     /// <summary>
-    /// Validates the submitted token against the specified uri async.
+    /// Validates the submitted token against the specified resource path async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>True if the token was submitted and was matched against the uri or the uri was not locked, otherwise false.</returns>
+    /// <returns>True if the token was submitted and was matched against the resource path or the resource path was not locked, otherwise false.</returns>
     protected async ValueTask<bool> ValidateTokenAsync(
-        Uri uri,
+        ResourcePath path,
         CancellationToken cancellationToken = default)
     {
-        await EnsureLocksAsync(uri, cancellationToken);
+        await EnsureLocksAsync(path, cancellationToken);
         
-        var activeLocks = lockCache[uri];
+        var activeLocks = lockCache[path];
         if (activeLocks.Count > 0)
         {
             if (WebDavHeaders.If.Count == 0)
                 return false;
             
-            IEnumerable<IfHeaderValueCondition> Matches(Uri? matchUri)
+            IEnumerable<IfHeaderValueCondition> Matches(ResourcePath? matchPath)
             {
                 foreach (var condition in WebDavHeaders.If)
                 {
-                    if (condition.Uri == matchUri)
+                    if ((condition.Uri != null ? new ResourcePath(condition.Uri.AbsolutePath) : null) == matchPath)
                         yield return condition;
                 }
             }
             
             // check if we can generally unlock one of the locks
-            var conditions = new List<IfHeaderValueCondition>(Matches(uri));
+            var conditions = new List<IfHeaderValueCondition>(Matches(path));
             conditions.AddRange(Matches(null));
             
             var unlock = activeLocks
@@ -202,25 +202,25 @@ internal abstract class RequestHandler : IRequestHandler
             }
         }
 
-        var isLocked = await CheckLockedAsync(item.Uri, cancellationToken);
+        var isLocked = await CheckLockedAsync(item.Path, cancellationToken);
         if (isLocked)
         {
-            var tokenSubmitted = await ValidateTokenAsync(item.Uri, cancellationToken);
+            var tokenSubmitted = await ValidateTokenAsync(item.Path, cancellationToken);
             if (!tokenSubmitted)
             {
                 error = true;
-                errors.Add(new WebDavError(item.Uri, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
+                errors.Add(new WebDavError(item.Path, DavStatusCode.Locked, new XElement(XmlNames.LockTokenSubmitted)));
             }
         }
 
         if (error)
             return false;
         
-        var itemName = item.Uri.GetRelativeUri(collection.Uri).LocalPath.TrimStart('/');
+        var itemName = ResourcePath.GetRelativePath(item.Path, collection.Path).Name!;
         var status = await collection.DeleteItemAsync(itemName, cancellationToken);
         if (status != DavStatusCode.NoContent)
         {
-            errors.Add(new WebDavError(item.Uri, status, null));
+            errors.Add(new WebDavError(item.Path, status, null));
             return false;
         }
 
@@ -232,36 +232,36 @@ internal abstract class RequestHandler : IRequestHandler
 
     private async ValueTask<bool> ValidatePreConditionsAsync(CancellationToken cancellationToken = default)
     {
-        var requestUri = Context.Request.Path.ToUri();
-        var items = new Dictionary<Uri, IStoreItem?>();
+        var requestPath = new ResourcePath(Context.Request.Path);
+        var items = new Dictionary<ResourcePath, IStoreItem?>();
 
         if (WebDavHeaders.If.Count > 0)
         {
             var groups = WebDavHeaders.If
-                .GroupBy(x => x.Uri != null ? x.Uri : requestUri);
+                .GroupBy(x => x.Uri != null ? new ResourcePath(x.Uri.AbsolutePath) : requestPath);
 
             async ValueTask<bool> ValidateConditionAsync(IfHeaderValueCondition condition)
             {
-                var resourceUri = condition.Uri ?? requestUri;
-                if (!items.ContainsKey(resourceUri))
+                var resourcePath = condition.Uri != null ? new ResourcePath(condition.Uri.AbsolutePath) : requestPath;
+                if (!items.ContainsKey(resourcePath))
                 {
-                    var parentUri = resourceUri.GetParent();
-                    var collection = await Store.GetCollectionAsync(parentUri, cancellationToken);
+                    var parentPath = resourcePath.Parent ?? ResourcePath.Root;
+                    var collection = await Store.GetCollectionAsync(parentPath, cancellationToken);
                     if (collection != null)
                     {
-                        var itemName = resourceUri.GetRelativeUri(collection.Uri).LocalPath.Trim('/');
+                        var itemName = ResourcePath.GetRelativePath(resourcePath, collection.Path).Name;
                         if (string.IsNullOrWhiteSpace(itemName))
                         {
-                            items[resourceUri] = collection;
+                            items[resourcePath] = collection;
                         }
                         else
                         {
-                            items[resourceUri] = await collection.GetItemAsync(itemName, cancellationToken);
+                            items[resourcePath] = await collection.GetItemAsync(itemName, cancellationToken);
                         }   
                     }
                 }
 
-                var item = items[resourceUri];
+                var item = items[resourcePath];
                 if (condition.Tags.Length > 0)
                 {
                     string? itemEtag = null;
@@ -285,9 +285,9 @@ internal abstract class RequestHandler : IRequestHandler
 
                 if (condition.Tokens.Length > 0)
                 {
-                    await EnsureLocksAsync(resourceUri, cancellationToken);
+                    await EnsureLocksAsync(resourcePath, cancellationToken);
 
-                    var activeLocks = lockCache[resourceUri];
+                    var activeLocks = lockCache[resourcePath];
                     foreach (var stateToken in condition.Tokens)
                     {
                         var conditionResult = stateToken.Negate
@@ -324,7 +324,7 @@ internal abstract class RequestHandler : IRequestHandler
         }
 
         var requestHeaders = Context.Request.GetTypedHeaders();
-        if (requestHeaders.IfMatch?.Count > 0)
+        if (requestHeaders.IfMatch.Count > 0)
         {
             if (requestHeaders.IfMatch.Count == 1 && requestHeaders.IfMatch[0].Tag == "*")
             {
@@ -352,7 +352,7 @@ internal abstract class RequestHandler : IRequestHandler
             }
         }
 
-        if (requestHeaders.IfNoneMatch?.Count > 0)
+        if (requestHeaders.IfNoneMatch.Count > 0)
         {
             var statusCode = Context.Request.Method is WebDavMethods.Get or WebDavMethods.Head or WebDavMethods.PropFind
                 ? DavStatusCode.NotModified
@@ -414,10 +414,10 @@ internal abstract class RequestHandler : IRequestHandler
         return true;
     }
 
-    private async ValueTask EnsureLocksAsync(Uri uri, CancellationToken cancellationToken = default)
+    private async ValueTask EnsureLocksAsync(ResourcePath path, CancellationToken cancellationToken = default)
     {
-        if (!lockCache.ContainsKey(uri))
-            lockCache[uri] = await LockManager.GetLocksAsync(uri, cancellationToken);
+        if (!lockCache.ContainsKey(path))
+            lockCache[path] = await LockManager.GetLocksAsync(path, cancellationToken);
     }
 
     /// <summary>

@@ -49,7 +49,7 @@ internal class PropFindHandler : RequestHandler
         foreach (var item in items)
         {
             var response = new XElement(XmlNames.Response);
-            response.Add(new XElement(XmlNames.Href, $"{Context.Request.PathBase}{item.Uri.AbsolutePath}"));
+            response.Add(new XElement(XmlNames.Href, $"{Context.Request.PathBase}{item.Path}"));
 
             var propertyValues = await GetPropertiesAsync(
                 item,

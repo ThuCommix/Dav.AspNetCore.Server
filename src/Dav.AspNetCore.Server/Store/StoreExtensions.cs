@@ -4,12 +4,13 @@ public static class StoreExtensions
 {
     public static async Task<IStoreCollection?> GetCollectionAsync(
         this IStore store, 
-        Uri uri, 
+        ResourcePath path, 
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(store, nameof(store));
+        ArgumentNullException.ThrowIfNull(path, nameof(path));
 
-        var item = await store.GetItemAsync(uri, cancellationToken);
+        var item = await store.GetItemAsync(path, cancellationToken);
         return item as IStoreCollection;
     }
 }

@@ -29,9 +29,9 @@ public class Directory : IStoreCollection
     }
 
     /// <summary>
-    /// Gets the uri.
+    /// Gets the resource path.
     /// </summary>
-    public Uri Uri => properties.Uri;
+    public ResourcePath Path => properties.Path;
 
     /// <summary>
     /// Gets a readable stream async.
@@ -69,7 +69,7 @@ public class Directory : IStoreCollection
     {
         var result = await destination.CreateCollectionAsync(name, cancellationToken);
         if (result.Collection != null)
-            store.ItemCache[result.Collection.Uri] = result.Collection;
+            store.ItemCache[result.Collection.Path] = result.Collection;
         
         return new ItemResult(result.StatusCode, result.Collection);
     }
@@ -81,7 +81,7 @@ public class Directory : IStoreCollection
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The store item or null.</returns>
     public Task<IStoreItem?> GetItemAsync(string name, CancellationToken cancellationToken = default) 
-        => store.GetItemAsync(UriHelper.Combine(properties.Uri, name), cancellationToken);
+        => store.GetItemAsync(ResourcePath.Combine(properties.Path, name), cancellationToken);
 
     /// <summary>
     /// Gets the store items async.
@@ -90,32 +90,32 @@ public class Directory : IStoreCollection
     /// <returns>The store items.</returns>
     public async Task<IReadOnlyCollection<IStoreItem>> GetItemsAsync(CancellationToken cancellationToken = default)
     {
-        if (store.CollectionCache.TryGetValue(Uri, out var cacheItems) && !store.DisableCaching)
+        if (store.CollectionCache.TryGetValue(Path, out var cacheItems) && !store.DisableCaching)
             return cacheItems;
         
         var items = new List<IStoreItem>();
 
-        var directoryUris = await store.GetDirectoriesAsync(properties.Uri, cancellationToken);
-        foreach (var uri in directoryUris)
+        var directoryPaths = await store.GetDirectoriesAsync(properties.Path, cancellationToken);
+        foreach (var path in directoryPaths)
         {
-            var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
+            var directoryProperties = await store.GetDirectoryPropertiesAsync(path, cancellationToken);
             var collection = new Directory(store, directoryProperties);
             
-            store.ItemCache[collection.Uri] = collection;
+            store.ItemCache[collection.Path] = collection;
             items.Add(collection);
         }
 
-        var fileUris = await store.GetFilesAsync(properties.Uri, cancellationToken);
-        foreach (var uri in fileUris)
+        var filePaths = await store.GetFilesAsync(properties.Path, cancellationToken);
+        foreach (var path in filePaths)
         {
-            var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
+            var fileProperties = await store.GetFilePropertiesAsync(path, cancellationToken);
             var item = new File(store, fileProperties);
 
-            store.ItemCache[item.Uri] = item;
+            store.ItemCache[item.Path] = item;
             items.Add(item);
         }
 
-        store.CollectionCache[Uri] = items;
+        store.CollectionCache[Path] = items;
 
         return items;
     }
@@ -134,13 +134,13 @@ public class Directory : IStoreCollection
         if (item != null)
             return CollectionResult.Fail(DavStatusCode.NotAllowed);
         
-        var uri = UriHelper.Combine(properties.Uri, name);
-        await store.CreateDirectoryAsync(uri, cancellationToken);
+        var path = ResourcePath.Combine(properties.Path, name);
+        await store.CreateDirectoryAsync(path, cancellationToken);
         
-        var directoryProperties = await store.GetDirectoryPropertiesAsync(uri, cancellationToken);
+        var directoryProperties = await store.GetDirectoryPropertiesAsync(path, cancellationToken);
         var collection = new Directory(store, directoryProperties);
 
-        store.ItemCache[collection.Uri] = collection;
+        store.ItemCache[collection.Path] = collection;
         
         return CollectionResult.Created(collection);
     }
@@ -149,13 +149,13 @@ public class Directory : IStoreCollection
         string name, 
         CancellationToken cancellationToken = default)
     {
-        var uri = UriHelper.Combine(properties.Uri, name);
-        await (await store.OpenFileStreamAsync(uri, OpenFileMode.Write, cancellationToken)).DisposeAsync();
+        var path = ResourcePath.Combine(properties.Path, name);
+        await (await store.OpenFileStreamAsync(path, OpenFileMode.Write, cancellationToken)).DisposeAsync();
         
-        var fileProperties = await store.GetFilePropertiesAsync(uri, cancellationToken);
+        var fileProperties = await store.GetFilePropertiesAsync(path, cancellationToken);
         var item = new File(store, fileProperties);
 
-        store.ItemCache[item.Uri] = item;
+        store.ItemCache[item.Path] = item;
         
         return new ItemResult(DavStatusCode.Created, item);
     }
@@ -197,22 +197,22 @@ public class Directory : IStoreCollection
         string name, 
         CancellationToken cancellationToken = default)
     {
-        var uri = UriHelper.Combine(properties.Uri, name);
+        var path = ResourcePath.Combine(properties.Path, name);
 
         try
         {
-            if (await store.DirectoryExistsAsync(uri, cancellationToken))
+            if (await store.DirectoryExistsAsync(path, cancellationToken))
             {
-                await store.DeleteDirectoryAsync(uri, cancellationToken);
-                store.ItemCache.Remove(uri);
+                await store.DeleteDirectoryAsync(path, cancellationToken);
+                store.ItemCache.Remove(path);
                 
                 return DavStatusCode.NoContent;
             }
 
-            if (await store.FileExistsAsync(uri, cancellationToken))
+            if (await store.FileExistsAsync(path, cancellationToken))
             {
-                await store.DeleteFileAsync(uri, cancellationToken);
-                store.ItemCache.Remove(uri);
+                await store.DeleteFileAsync(path, cancellationToken);
+                store.ItemCache.Remove(path);
                 
                 return DavStatusCode.NoContent;
             }

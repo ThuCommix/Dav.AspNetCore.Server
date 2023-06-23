@@ -9,16 +9,16 @@ public class DestinationHeaderValue
     /// Initializes a new <see cref="DestinationHeaderValue"/> class.
     /// </summary>
     /// <param name="destination">The destination.</param>
-    public DestinationHeaderValue(Uri destination)
+    public DestinationHeaderValue(ResourcePath destination)
     {
         ArgumentNullException.ThrowIfNull(destination, nameof(destination));
         Destination = destination;
     }
     
     /// <summary>
-    /// Gets the destination uri.
+    /// Gets the destination resource path.
     /// </summary>
-    public Uri Destination { get; }
+    public ResourcePath Destination { get; }
     
     /// <summary>
     /// Parses the input.
@@ -49,15 +49,13 @@ public class DestinationHeaderValue
 
         if (Uri.TryCreate(input, UriKind.Absolute, out var uri))
         {
-            var pathString = new PathString(uri.LocalPath);
-            parsedValue = new DestinationHeaderValue(pathString.ToUri());
+            parsedValue = new DestinationHeaderValue(new ResourcePath(uri.LocalPath));
             return true;
         }
 
         if(!input.StartsWith("/") && Uri.TryCreate($"/{input}", UriKind.Absolute, out var uri2))
         {
-            var pathString = new PathString(uri2.LocalPath);
-            parsedValue = new DestinationHeaderValue(pathString.ToUri());
+            parsedValue = new DestinationHeaderValue(new ResourcePath(uri2.LocalPath));
             return true;
         }
 

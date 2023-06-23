@@ -9,10 +9,10 @@ internal class MkColHandler : RequestHandler
     /// <returns></returns>
     protected override async Task HandleRequestAsync(CancellationToken cancellationToken = default)
     {
-        var requestUri = Context.Request.Path.ToUri();
-        var parentUri = requestUri.GetParent();
+        var requestPath = new ResourcePath(Context.Request.Path);
+        var parentPath = requestPath.Parent ?? ResourcePath.Root;
 
-        var collectionName = requestUri.GetRelativeUri(parentUri).LocalPath.Trim('/');
+        var collectionName = ResourcePath.GetRelativePath(requestPath, parentPath).Name!;
         var result = await Collection.CreateCollectionAsync(collectionName, cancellationToken);
         Context.SetResult(result.StatusCode);
     }

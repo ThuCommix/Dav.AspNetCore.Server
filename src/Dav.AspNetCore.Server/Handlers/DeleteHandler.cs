@@ -28,7 +28,7 @@ internal class DeleteHandler : RequestHandler
         var responses = new List<XElement>();
         foreach (var davError in errors)
         {
-            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Uri.AbsolutePath}");
+            var href = new XElement(XmlNames.Href, $"{Context.Request.PathBase}{davError.Path}");
             var status = new XElement(XmlNames.Status, $"HTTP/1.1 {(int)davError.StatusCode} {davError.StatusCode.GetDisplayName()}");
             var response = new XElement(XmlNames.Response, href, status);
             

@@ -15,7 +15,7 @@ public class WebDavRequestHeaders
     /// <summary>
     /// Gets the <see cref="DestinationHeaderValue"/>.
     /// </summary>
-    public required Uri? Destination { get; init; }
+    public required ResourcePath? Destination { get; init; }
 
     /// <summary>
     /// Gets the <see cref="OverwriteHeaderValue"/>.

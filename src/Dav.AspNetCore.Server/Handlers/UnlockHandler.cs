@@ -15,9 +15,9 @@ internal class UnlockHandler : RequestHandler
             return;
         }
         
-        var requestUri = Context.Request.Path.ToUri();
+        var requestPath = new ResourcePath(Context.Request.Path);
         var result = await LockManager.UnlockAsync(
-            requestUri,
+            requestPath,
             WebDavHeaders.LockTokenUri,
             cancellationToken);
         

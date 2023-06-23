@@ -28,9 +28,9 @@ public class File : IStoreItem
     }
 
     /// <summary>
-    /// Gets the uri.
+    /// Gets the resource path.
     /// </summary>
-    public Uri Uri => properties.Uri;
+    public ResourcePath Path => properties.Path;
 
     /// <summary>
     /// Gets a readable stream async.
@@ -38,7 +38,7 @@ public class File : IStoreItem
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The readable stream.</returns>
     public async Task<Stream> GetReadableStreamAsync(CancellationToken cancellationToken = default)
-        => await store.OpenFileStreamAsync(properties.Uri, OpenFileMode.Read, cancellationToken);
+        => await store.OpenFileStreamAsync(properties.Path, OpenFileMode.Read, cancellationToken);
 
     /// <summary>
     /// Sets the data from the given stream async.
@@ -50,7 +50,7 @@ public class File : IStoreItem
     {
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
-        await using var fileStream = await store.OpenFileStreamAsync(properties.Uri, OpenFileMode.Write, cancellationToken);
+        await using var fileStream = await store.OpenFileStreamAsync(properties.Path, OpenFileMode.Write, cancellationToken);
         await stream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
 
         return DavStatusCode.Ok;
@@ -91,17 +91,17 @@ public class File : IStoreItem
         if (statusCode != DavStatusCode.Ok)
             return ItemResult.Fail(statusCode);
 
-        store.ItemCache[result.Item.Uri] = result.Item;
+        store.ItemCache[result.Item.Path] = result.Item;
         
         return item != null 
             ? ItemResult.NoContent(result.Item) 
             : ItemResult.Created(result.Item);
     }
     
-    private static string GetMimeTypeForFileExtension(Uri uri)
+    private static string GetMimeTypeForFileExtension(ResourcePath path)
     {
         var provider = new FileExtensionContentTypeProvider();
-        if (!provider.TryGetContentType(uri.AbsolutePath, out var contentType))
+        if (!provider.TryGetContentType(path.ToFilePath(), out var contentType))
         {
             contentType = "application/octet-stream";
         }
@@ -111,10 +111,10 @@ public class File : IStoreItem
     
     private static async Task<string> ComputeEtagAsync(
         FileStore store,
-        Uri uri, 
+        ResourcePath path, 
         CancellationToken cancellationToken = default)
     {
-        await using var fileStream = await store.OpenFileStreamAsync(uri, OpenFileMode.Read, cancellationToken);
+        await using var fileStream = await store.OpenFileStreamAsync(path, OpenFileMode.Read, cancellationToken);
         using var algorithm = MD5.Create();
         var hash = await algorithm.ComputeHashAsync(fileStream, cancellationToken);
 
@@ -163,7 +163,7 @@ public class File : IStoreItem
             XmlNames.GetContentType,
             read: (context, _) =>
             {
-                context.SetResult(GetMimeTypeForFileExtension(context.Item.Uri)); 
+                context.SetResult(GetMimeTypeForFileExtension(context.Item.Path)); 
                 return ValueTask.CompletedTask;
             },
             metadata: new PropertyMetadata(Computed: true));
@@ -182,7 +182,7 @@ public class File : IStoreItem
             read: async (context, cancellationToken) =>
             {
                 var fileItem = (File)context.Item;
-                var etag = await ComputeEtagAsync(fileItem.store, fileItem.properties.Uri, cancellationToken);
+                var etag = await ComputeEtagAsync(fileItem.store, fileItem.properties.Path, cancellationToken);
                 
                 context.SetResult(etag);
             },

@@ -15,11 +15,11 @@ public class InMemoryLockManagerTest
     {
         // arrange
         var memoryLockManager = new InMemoryLockManager(Array.Empty<ResourceLock>());
-        var uri = new Uri("/test.txt");
+        var path = new ResourcePath("/test.txt");
 
         // act
         var result = await memoryLockManager.LockAsync(
-            uri, 
+            path, 
             lockType, 
             new XElement("href", "xUnit"), 
             recursive, 
@@ -28,7 +28,7 @@ public class InMemoryLockManagerTest
         // assert
         Assert.Equal(DavStatusCode.Ok, result.StatusCode);
         Assert.NotNull(result.ResourceLock);
-        Assert.Equal(uri, result.ResourceLock.Uri);
+        Assert.Equal(path, result.ResourceLock.Path);
         Assert.Equal(lockType, result.ResourceLock.LockType);
         Assert.Equal(recursive, result.ResourceLock.Recursive);
         Assert.Equal(TimeSpan.FromSeconds(timeout), result.ResourceLock.Timeout);
@@ -40,7 +40,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/"),
+            new ResourcePath("/"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -51,7 +51,7 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.LockAsync(
-            new Uri("/test.txt"), 
+            new ResourcePath("/test.txt"), 
             LockType.Exclusive, 
             new XElement("href", "xUnit"), 
             true, 
@@ -68,7 +68,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/test.txt"),
+            new ResourcePath("/test.txt"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -78,7 +78,7 @@ public class InMemoryLockManagerTest
         var memoryLockManager = new InMemoryLockManager(new[] { resourceLock });
 
         // act
-        var statusCode = await memoryLockManager.UnlockAsync(resourceLock.Uri, resourceLock.Id);
+        var statusCode = await memoryLockManager.UnlockAsync(resourceLock.Path, resourceLock.Id);
 
         // assert
         Assert.Equal(DavStatusCode.NoContent, statusCode);
@@ -91,7 +91,7 @@ public class InMemoryLockManagerTest
         var memoryLockManager = new InMemoryLockManager(Array.Empty<ResourceLock>());
 
         // act
-        var statusCode = await memoryLockManager.UnlockAsync(new Uri("/test.txt"), new Uri($"urn:uuid:{Guid.NewGuid():D}"));
+        var statusCode = await memoryLockManager.UnlockAsync(new ResourcePath("/test.txt"), new Uri($"urn:uuid:{Guid.NewGuid():D}"));
 
         // assert
         Assert.Equal(DavStatusCode.Conflict, statusCode);
@@ -103,7 +103,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/test.txt"),
+            new ResourcePath("/test.txt"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -114,7 +114,7 @@ public class InMemoryLockManagerTest
         
         // act
         var result = await memoryLockManager.LockAsync(
-            resourceLock.Uri, 
+            resourceLock.Path, 
             LockType.Exclusive, 
             new XElement("href", "xUnit"), 
             true, 
@@ -131,7 +131,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/test.txt"),
+            new ResourcePath("/test.txt"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -142,14 +142,14 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.RefreshLockAsync(
-            resourceLock.Uri, 
+            resourceLock.Path, 
             resourceLock.Id,
             TimeSpan.Zero);
 
         // assert
         Assert.Equal(DavStatusCode.Ok, result.StatusCode);
         Assert.NotNull(result.ResourceLock);
-        Assert.Equal(resourceLock.Uri, result.ResourceLock.Uri);
+        Assert.Equal(resourceLock.Path, result.ResourceLock.Path);
         Assert.Equal(resourceLock.LockType, result.ResourceLock.LockType);
         Assert.Equal(resourceLock.Recursive, result.ResourceLock.Recursive);
         Assert.Equal(resourceLock.Timeout, result.ResourceLock.Timeout);
@@ -163,7 +163,7 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.RefreshLockAsync(
-            new Uri("/test.txt"), 
+            new ResourcePath("/test.txt"), 
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
             TimeSpan.Zero);
 
@@ -178,7 +178,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/test.txt"),
+            new ResourcePath("/test.txt"),
             LockType.Shared,
             new XElement("href", "xUnit"),
             true,
@@ -189,7 +189,7 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.LockAsync(
-            resourceLock.Uri, 
+            resourceLock.Path, 
             LockType.Shared, 
             new XElement("href", "xUnit"), 
             true, 
@@ -198,7 +198,7 @@ public class InMemoryLockManagerTest
         // assert
         Assert.Equal(DavStatusCode.Ok, result.StatusCode);
         Assert.NotNull(result.ResourceLock);
-        Assert.Equal(resourceLock.Uri, result.ResourceLock.Uri);
+        Assert.Equal(resourceLock.Path, result.ResourceLock.Path);
         Assert.Equal(resourceLock.LockType, result.ResourceLock.LockType);
         Assert.Equal(resourceLock.Recursive, result.ResourceLock.Recursive);
         Assert.Equal(resourceLock.Timeout, result.ResourceLock.Timeout);
@@ -210,7 +210,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/"),
+            new ResourcePath("/"),
             LockType.Shared,
             new XElement("href", "xUnit"),
             true,
@@ -218,11 +218,11 @@ public class InMemoryLockManagerTest
             DateTime.Now);
 
         var memoryLockManager = new InMemoryLockManager(new[] { resourceLock });
-        var uri = new Uri("/test.txt");
+        var path = new ResourcePath("/test.txt");
 
         // act
         var result = await memoryLockManager.LockAsync(
-            uri,
+            path,
             LockType.Shared, 
             new XElement("href", "xUnit"), 
             true, 
@@ -231,7 +231,7 @@ public class InMemoryLockManagerTest
         // assert
         Assert.Equal(DavStatusCode.Ok, result.StatusCode);
         Assert.NotNull(result.ResourceLock);
-        Assert.Equal(uri, result.ResourceLock.Uri);
+        Assert.Equal(path, result.ResourceLock.Path);
         Assert.Equal(resourceLock.LockType, result.ResourceLock.LockType);
         Assert.Equal(resourceLock.Recursive, result.ResourceLock.Recursive);
         Assert.Equal(resourceLock.Timeout, result.ResourceLock.Timeout);
@@ -243,7 +243,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/test.txt"),
+            new ResourcePath("/test.txt"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -254,7 +254,7 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.LockAsync(
-            resourceLock.Uri, 
+            resourceLock.Path, 
             LockType.Shared, 
             new XElement("href", "xUnit"), 
             true, 
@@ -271,7 +271,7 @@ public class InMemoryLockManagerTest
         // arrange
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-            new Uri("/"),
+            new ResourcePath("/"),
             LockType.Exclusive,
             new XElement("href", "xUnit"),
             true,
@@ -282,7 +282,7 @@ public class InMemoryLockManagerTest
 
         // act
         var result = await memoryLockManager.LockAsync(
-            new Uri("/test.txt"), 
+            new ResourcePath("/test.txt"), 
             LockType.Shared, 
             new XElement("href", "xUnit"), 
             true, 
@@ -298,7 +298,7 @@ public class InMemoryLockManagerTest
     {
         // arrange
         var memoryLockManager = new InMemoryLockManager(Array.Empty<ResourceLock>());
-        var item = new TestStoreItem(new Uri("/test.txt"));
+        var item = new TestStoreItem(new ResourcePath("/test.txt"));
 
         // act
         var result = await memoryLockManager.GetSupportedLocksAsync(item);

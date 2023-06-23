@@ -2,7 +2,7 @@ using Dav.AspNetCore.Server.Store;
 
 namespace Dav.AspNetCore.Server.Tests;
 
-public record TestStoreItem(Uri Uri) : IStoreItem
+public record TestStoreItem(ResourcePath Path) : IStoreItem
 {
     public Task<Stream> GetReadableStreamAsync(CancellationToken cancellationToken = default)
     {

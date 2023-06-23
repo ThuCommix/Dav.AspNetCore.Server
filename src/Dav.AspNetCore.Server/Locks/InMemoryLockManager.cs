@@ -35,7 +35,7 @@ public sealed class InMemoryLockManager : ILockManager
     /// <summary>
     /// Locks the resource async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="lockType">The lock type.</param>
     /// <param name="owner">The lock owner.</param>
     /// <param name="recursive">A value indicating whether the lock will be recursive.</param>
@@ -43,24 +43,24 @@ public sealed class InMemoryLockManager : ILockManager
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lock result.</returns>
     public async ValueTask<LockResult> LockAsync(
-        Uri uri, 
+        ResourcePath path, 
         LockType lockType, 
         XElement owner, 
         bool recursive, 
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(uri, nameof(uri));
+        ArgumentNullException.ThrowIfNull(path, nameof(path));
         ArgumentNullException.ThrowIfNull(owner, nameof(owner));
         
-        var activeLocks = await GetLocksAsync(uri, cancellationToken);
+        var activeLocks = await GetLocksAsync(path, cancellationToken);
         if ((activeLocks.All(x => x.LockType == LockType.Shared) &&
              lockType == LockType.Shared) ||
             activeLocks.Count == 0)
         {
             var newLock = new ResourceLock(
                 new Uri($"urn:uuid:{Guid.NewGuid():D}"),
-                uri,
+                path,
                 lockType,
                 owner,
                 recursive,
@@ -77,21 +77,21 @@ public sealed class InMemoryLockManager : ILockManager
     /// <summary>
     /// Refreshes the resource lock async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="token">The lock token.</param>
     /// <param name="timeout">The lock timeout.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lock result.</returns>
     public ValueTask<LockResult> RefreshLockAsync(
-        Uri uri, 
+        ResourcePath path,
         Uri token, 
         TimeSpan timeout, 
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(uri, nameof(uri));
+        ArgumentNullException.ThrowIfNull(path, nameof(path));
         ArgumentNullException.ThrowIfNull(token, nameof(token));
         
-        var activeLock = locks.Values.FirstOrDefault(x => x.Uri == uri && x.Id == token && x.IsActive);
+        var activeLock = locks.Values.FirstOrDefault(x => x.Path == path && x.Id == token && x.IsActive);
         if (activeLock == null)
             return new ValueTask<LockResult>(new LockResult(DavStatusCode.PreconditionFailed));
 
@@ -112,19 +112,19 @@ public sealed class InMemoryLockManager : ILockManager
     /// <summary>
     /// Unlocks the resource async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="token">The lock token.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The status code.</returns>
     public ValueTask<DavStatusCode> UnlockAsync(
-        Uri uri, 
+        ResourcePath path,
         Uri token, 
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(uri, nameof(uri));
+        ArgumentNullException.ThrowIfNull(path, nameof(path));
         ArgumentNullException.ThrowIfNull(token, nameof(token));
         
-        var activeLock = locks.Values.FirstOrDefault(x => x.Uri == uri && x.Id == token && x.IsActive);
+        var activeLock = locks.Values.FirstOrDefault(x => x.Path == path && x.Id == token && x.IsActive);
         if (activeLock == null)
             return new ValueTask<DavStatusCode>(DavStatusCode.Conflict);
 
@@ -136,18 +136,18 @@ public sealed class InMemoryLockManager : ILockManager
     /// <summary>
     /// Gets all active resource locks async.
     /// </summary>
-    /// <param name="uri">The uri.</param>
+    /// <param name="path">The resource path.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A list of all active resource locks for the given store item.</returns>
     public ValueTask<IReadOnlyCollection<ResourceLock>> GetLocksAsync(
-        Uri uri, 
+        ResourcePath path,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(uri, nameof(uri));
+        ArgumentNullException.ThrowIfNull(path, nameof(path));
         
         var allActiveLocks = new List<ResourceLock>();
-        var pathParts = uri.LocalPath.Split('/');
-        if (uri.AbsoluteUri.Equals("/"))
+        var pathParts = Uri.UnescapeDataString(path).Split('/');
+        if (path.ToString().Equals("/"))
             pathParts = new[] { "" };
             
         var currentPath = string.Empty;
@@ -156,7 +156,7 @@ public sealed class InMemoryLockManager : ILockManager
         {
             currentPath += currentPath.Equals("/") ? pathParts[i] : $"/{pathParts[i]}";
             var activeLocks = locks.Values
-                .Where(x => x.Uri.LocalPath == currentPath && x.IsActive && (x.Recursive || i == pathParts.Length - 1))
+                .Where(x => x.Path == currentPath && x.IsActive && (x.Recursive || i == pathParts.Length - 1))
                 .ToList();
                 
             allActiveLocks.AddRange(activeLocks);

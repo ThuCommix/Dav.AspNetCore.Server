@@ -21,7 +21,7 @@ public class DestinationHeaderValueTest
         Assert.Equal(uriString != null, result);
         if (uriString != null)
         {
-            Assert.Equal(new Uri(uriString), parsedValue?.Destination);
+            Assert.Equal(new ResourcePath(uriString), parsedValue?.Destination);
         }
     }
     
@@ -44,6 +44,6 @@ public class DestinationHeaderValueTest
         var result = DestinationHeaderValue.Parse(input);
 
         // assert
-        Assert.Equal(new Uri(uriString), result.Destination);
+        Assert.Equal(new ResourcePath(uriString), result.Destination);
     }
 }
