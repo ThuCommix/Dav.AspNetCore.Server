@@ -16,19 +16,19 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<bool> DirectoryExistsAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         return ValueTask.FromResult(System.IO.Directory.Exists(path));
     }
 
     public override ValueTask<bool> FileExistsAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         return ValueTask.FromResult(System.IO.File.Exists(path));
     }
 
     public override ValueTask DeleteDirectoryAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         System.IO.Directory.Delete(path);
         
         return ValueTask.CompletedTask;
@@ -36,7 +36,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask DeleteFileAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         System.IO.File.Delete(path);
         
         return ValueTask.CompletedTask;
@@ -44,7 +44,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<DirectoryProperties> GetDirectoryPropertiesAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         var directoryInfo = new DirectoryInfo(path);
         var directoryProperties = new DirectoryProperties(
             resourcePath,
@@ -57,7 +57,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<FileProperties> GetFilePropertiesAsync(ResourcePath resourcePath, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         var fileInfo = new FileInfo(path);
         var fileProperties = new FileProperties(
             resourcePath,
@@ -71,7 +71,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<Stream> OpenFileStreamAsync(ResourcePath resourcePath, OpenFileMode mode, CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         return ValueTask.FromResult<Stream>(mode == OpenFileMode.Read 
             ? System.IO.File.OpenRead(path) 
             : System.IO.File.OpenWrite(path));
@@ -79,7 +79,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask CreateDirectoryAsync(ResourcePath resourcePath, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         System.IO.Directory.CreateDirectory(path);
         
         return ValueTask.CompletedTask;
@@ -87,7 +87,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<ResourcePath[]> GetFilesAsync(ResourcePath resourcePath, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         return ValueTask.FromResult(System.IO.Directory.GetFiles(path).Select(x =>
         {
             var relativePath = $"/{Path.GetRelativePath(options.RootPath, x)}";
@@ -97,7 +97,7 @@ public class LocalFileStore : FileStore
 
     public override ValueTask<ResourcePath[]> GetDirectoriesAsync(ResourcePath resourcePath, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart('/').TrimStart('\\'));
+        var path = Path.Combine(options.RootPath, resourcePath.ToFilePath().TrimStart(Path.DirectorySeparatorChar));
         return ValueTask.FromResult(System.IO.Directory.GetDirectories(path).Select(x =>
         {
             var relativePath = $"/{Path.GetRelativePath(options.RootPath, x)}";

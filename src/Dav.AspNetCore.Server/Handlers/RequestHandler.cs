@@ -102,7 +102,7 @@ internal abstract class RequestHandler : IRequestHandler
         }
         else
         {
-            var itemName = ResourcePath.GetRelativePath(requestPath, Collection.Path).Name!;
+            var itemName = requestPath.Name;
             Item = await collection.GetItemAsync(itemName, cancellationToken);
         }
 
@@ -216,7 +216,7 @@ internal abstract class RequestHandler : IRequestHandler
         if (error)
             return false;
         
-        var itemName = ResourcePath.GetRelativePath(item.Path, collection.Path).Name!;
+        var itemName = item.Path.Name;
         var status = await collection.DeleteItemAsync(itemName, cancellationToken);
         if (status != DavStatusCode.NoContent)
         {
@@ -249,7 +249,7 @@ internal abstract class RequestHandler : IRequestHandler
                     var collection = await Store.GetCollectionAsync(parentPath, cancellationToken);
                     if (collection != null)
                     {
-                        var itemName = ResourcePath.GetRelativePath(resourcePath, collection.Path).Name;
+                        var itemName = resourcePath.Name;
                         if (string.IsNullOrWhiteSpace(itemName))
                         {
                             items[resourcePath] = collection;

@@ -39,7 +39,6 @@ public class RequestHandlerTest
         
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -220,7 +219,6 @@ public class RequestHandlerTest
         
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
@@ -283,7 +281,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         
         var etag = matchEtag ? itemEtag : "B";
         var headers = new HeaderDictionary
@@ -343,7 +340,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         
         var headers = new HeaderDictionary
         {
@@ -394,7 +390,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
@@ -462,7 +457,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
 
         var resourceLock = new ResourceLock(
             new Uri($"urn:uuid:{Guid.NewGuid():D}"),
@@ -539,7 +533,6 @@ public class RequestHandlerTest
         
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync((IStoreItem?)null);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -603,7 +596,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -687,7 +679,6 @@ public class RequestHandlerTest
                     
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -736,7 +727,6 @@ public class RequestHandlerTest
         
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -800,7 +790,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -863,7 +852,6 @@ public class RequestHandlerTest
 
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);
@@ -992,8 +980,6 @@ public class RequestHandlerTest
         httpContext.Setup(s => s.RequestServices).Returns(requestServices.BuildServiceProvider);
         
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
-        
         var store = new Mock<IStore>(MockBehavior.Strict);
         store.Setup(s => s.GetItemAsync(collectionPath, It.IsAny<CancellationToken>())).ReturnsAsync(collection.Object);
 
@@ -1049,7 +1035,6 @@ public class RequestHandlerTest
         
         var collectionPath = new ResourcePath("/");
         var collection = new Mock<IStoreCollection>();
-        collection.Setup(s => s.Path).Returns(collectionPath);
         collection.Setup(s => s.GetItemAsync("test.txt", It.IsAny<CancellationToken>())).ReturnsAsync(item.Object);
         
         var store = new Mock<IStore>(MockBehavior.Strict);

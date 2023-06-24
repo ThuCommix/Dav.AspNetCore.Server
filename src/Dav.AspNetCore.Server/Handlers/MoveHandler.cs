@@ -45,7 +45,7 @@ internal class MoveHandler : RequestHandler
             return;
         }
 
-        var destinationItemName = ResourcePath.GetRelativePath(destination, destinationParentPath).Name!;
+        var destinationItemName = destination.Name;
         var destinationItem = await Store.GetItemAsync(destination, cancellationToken);
         if (destinationItem != null && !overwrite)
         {
@@ -145,7 +145,7 @@ internal class MoveHandler : RequestHandler
                 if (destinationMove == null)
                     throw new InvalidOperationException("If the copied item is a collection, the copy result must also be a collection.");
                 
-                var subItemName = ResourcePath.GetRelativePath(subItem.Path, collectionToMove.Path).Name!;
+                var subItemName = subItem.Path.Name;
                 var error = await MoveItemRecursiveAsync(collectionToMove, subItem, destinationMove, subItemName, errors, cancellationToken);
                 if (!error)
                     subItemError = true;
@@ -155,7 +155,7 @@ internal class MoveHandler : RequestHandler
                 return false;
         }
         
-        var itemName = ResourcePath.GetRelativePath(item.Path, collection.Path).Name!;
+        var itemName = item.Path.Name;
         var status = await collection.DeleteItemAsync(itemName, cancellationToken);
         if (status != DavStatusCode.NoContent)
         {

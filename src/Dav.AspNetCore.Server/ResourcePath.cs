@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace Dav.AspNetCore.Server;
 
 /// <summary>
@@ -39,7 +37,7 @@ public class ResourcePath
     /// <summary>
     /// Gets the resource path name.
     /// </summary>
-    public string? Name => value == "/" ? null : GetPathStringParts(this)[^1].Trim('/');
+    public string Name => value == "/" ? string.Empty : GetPathStringParts(this)[^1].Trim('/');
 
     /// <summary>Returns a string that represents the current object.</summary>
     /// <returns>A string that represents the current object.</returns>
@@ -71,13 +69,9 @@ public class ResourcePath
     /// Converts the resource path into a file path.
     /// </summary>
     /// <returns></returns>
-    public string ToFilePath()
-    {
-        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-            ? value.Replace('/', '\\') 
-            : value;
-    }
-    
+    public string ToFilePath() 
+        => value.Replace('/', Path.DirectorySeparatorChar);
+
     /// <summary>
     /// Combines the resource path with a string.
     /// </summary>

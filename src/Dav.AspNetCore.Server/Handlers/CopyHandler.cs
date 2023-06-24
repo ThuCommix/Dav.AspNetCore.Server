@@ -54,7 +54,7 @@ internal class CopyHandler : RequestHandler
             return;
         }
         
-        var destinationItemName = ResourcePath.GetRelativePath(destination, destinationParentPath).Name!;
+        var destinationItemName = destination.Name;
         var destinationItem = await Store.GetItemAsync(destination, cancellationToken);
         if (destinationItem != null && !overwrite)
         {
@@ -154,7 +154,7 @@ internal class CopyHandler : RequestHandler
                 if (destinationCopy == null)
                     throw new InvalidOperationException("If the copied item is a collection, the copy result must also be a collection.");
                 
-                var itemName = ResourcePath.GetRelativePath(subItem.Path, collection.Path).Name!;
+                var itemName = subItem.Path.Name;
                 var error = await CopyItemRecursiveAsync(subItem, destinationCopy, itemName, recursive, errors, cancellationToken);
                 if (!error)
                     subItemError = true;
